@@ -1,0 +1,228 @@
+{include file="./driver_salary_online/header.htm"}
+<div id="app">
+    <el-container v-loading="loading">
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 配送员工资结算配置详情</span>
+            <el-link :href="back_url" :underline="false" class="header_link"><i class="el-icon-arrow-left"></i> 返回列表</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-form ref="form"  :model="form"  label-width="200px" class="pl-20" size="mini">
+                <!--步骤一-->
+                <el-form-item label="城市："  ><span class="label-content">{{form.region_name}}</span></el-form-item>
+                <el-form-item label="仓库库房："  prop="mobile"><span class="label-content">{{form.house_name }} {{form.store_name }}</span></el-form-item>
+                <el-form-item label="订单类型："> <span class="label-content">订单类型</span></el-form-item>
+                <el-form-item label="有效时间："> <span class="label-content">2020-10-09 至 2020-11-09</span></el-form-item>
+                <el-form-item label="配置状态："><span class="label-content">测试数据</span></el-form-item>
+                <el-form-item label="结算费用："><span class="label-content">测试数据</span></el-form-item>
+                <!--步骤二-->
+                <!--配送费配置 s-->
+                <el-row  type="flex" v-if="form.settle_type_ids.includes('1')">
+                    <el-form-item label="配送费："  >
+                        <span class="label-content">{{form.shipping_fee.settle_type_child_name}}</span>
+                        <el-card class="mt-20" v-if="form.shipping_fee.settle_type_child">
+                            <el-table
+                                    ref="shipping_fee"
+                                    size="mini"
+                                    style="width: 100%"
+                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                    :data="form.shipping_fee.child_data"
+                                    max-height="600px">
+                                <el-table-column  fixed  type="index" width="40"></el-table-column>
+                                <el-table-column v-if="form.shipping_fee.settle_type_child == 1" min-width="300" property="district_ids_name" label="区域" ></el-table-column>
+                                <!--  2、按单量结算-->
+                                <el-table-column v-if="form.shipping_fee.settle_type_child == 2"  label="单量下限(包含)"  property="order_num_lower"  width="200"></el-table-column>
+                                <el-table-column v-if="form.shipping_fee.settle_type_child == 2"  label="单量上限(不包含)" property="order_num_upper"  width="220" ></el-table-column>
+                                <el-table-column  label="配送费" min-width="220" property="unit_price"></el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-form-item>
+                </el-row>
+                <!--配送费配置 e-->
+
+                <!--搬楼费配置 s-->
+                <el-row type="flex"  v-if="form.settle_type_ids.includes('2')">
+                    <el-form-item label="搬楼费：" >
+                        <span class="label-content">{{form.banlou_fee.settle_type_child_name}}</span>
+                        <el-card class="mt-20" v-if="form.banlou_fee.settle_type_child" >
+                            <el-table
+                                    ref="banlou_fee"
+                                    size="mini"
+                                    style="width: 100%"
+                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                    :data="form.banlou_fee.child_data"
+                                    max-height="600px">
+                                <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                <el-table-column  label="有无电梯" width="200">
+                                    <template slot-scope="{ row }"><span>{{row.has_elevator ==1 ? '有':'无'}}</span></template>
+                                </el-table-column>
+                                <el-table-column  label="楼层" width="200"  property="floor_name"></el-table-column>
+                                <!--  1、按件结算 -->
+                                <div v-if="form.banlou_fee.settle_type_child== 3">
+                                    <el-table-column  label="是否锯板" width="200">
+                                        <template slot-scope="{ row }"> <span>{{row.is_cut ==1 ? '是':'否'}}</span></template>
+                                    </el-table-column>
+                                </div>
+                                <!--  2、按箱结算 -->
+                                <el-table-column   :label="form.banlou_fee.settle_type_child == 3 ? '搬楼费(元/件)': '搬楼费(元/箱)'" width="220"  property="unit_price"></el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-form-item>
+                </el-row>
+                <!--搬楼费配置 e-->
+                <!--托运费配置 s-->
+                <el-row type="flex" v-if="form.settle_type_ids.includes('3')">
+                    <el-form-item label="托运费：" >
+                    <span class="label-content">{{form.consign_fee.settle_type_child_name}}</span>
+                        <el-card class="mt-20" v-if="form.consign_fee.settle_type_child" >
+                            <el-table
+                                    ref="table"
+                                    size="mini"
+                                    style="width: 100%"
+                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                    :data="form.consign_fee.child_data"
+                                    max-height="600px">
+                                <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                <el-table-column  label="距离下限（包含）/米" width="200" property="distance_lower"></el-table-column>
+                                <el-table-column  label="距离上限（不包含）/米" width="220" property="distance_upper"></el-table-column>
+                                <el-table-column  label="托运费（元/件）" width="220" property="unit_price"></el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-form-item>
+                </el-row>
+                <!--托运费配置 e-->
+                <!--吨位费 s -->
+                <el-row v-if="form.settle_type_ids.includes('4')">
+                    <el-form-item label="吨位费：" >
+                        <span class="label-content">{{form.tonnage_fee.settle_type_child_name}}</span>
+                        <el-row type="flex" class="mt-20" v-if="form.tonnage_fee.settle_type_child" align="middle">
+                            <span class="label-content">每吨货物（元/单）{{form.tonnage_fee.child_data[0].unit_price}}</span>
+                        </el-row>
+                    </el-form-item>
+                </el-row>
+                <!--吨位费 e -->
+            </el-form>
+        </el-main>
+    </el-container>
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                back_url: './driver_salary_online.php?act=delivery_sal_conf_list',
+                ds_id: '',
+                loading: false,
+                //配送费
+                moving_cost_options: [
+                    { label: '按件结算', value: '1'},
+                    { label: '按箱结算', value: '2'}
+                ],
+                // 搬楼费
+                delivery_cost_options: [
+                    { label: '按区域结算', value: '1'},
+                    { label: '按单量结算', value: '2'}
+                ],
+                // 托运费
+                consignment_cost_options: [
+                    { label: '按距离结算', value: '1'}
+                ],
+                // 吨位费
+                tonnage_cost_options: [
+                    { label: '按吨结算', value: '1'}
+                ],
+                form: {
+                    is_enable: '1',
+                    driver_tag: '',
+                    order_type_ids: [],
+                    settle_type_ids: [],
+                    shipping_fee: { child_data: []},
+                    banlou_fee: {},
+                    consign_fee: {},
+                    tonnage_fee : {}
+                } // 添加配置数据对象
+            }
+        },
+        created() {
+            const params = this.parseQuery()
+            if(!params.ds_id) {
+                return this.$message({ type: 'error', message: '获取数据失败~' })
+            }
+            this.ds_id = params.ds_id
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            init_data() {
+                this.get_details()
+            },
+            get_details() {
+                const _that = this;
+                _that.loading = true
+                get_driver_config_detail({ ds_id: _that.ds_id }).then(res =>{
+                    _that.form = res.data
+                    _that.form.shipping_fee = res.data.shipping_fee || {}
+                    _that.form.banlou_fee = res.data.banlou_fee || {}
+                    _that.form.consign_fee = res.data.consign_fee || {}
+                    _that.form.tonnage_fee = res.data.tonnage_fee || {}
+                    _that.form.warehouse = [ _that.form.house_id, _that.form.store_id]
+                    _that.form.date = [_that.form.expire_date_start, _that.form.expire_date_end]
+                    console.log( _that.form.date)
+                    _that.change_city(_that.form.city)
+                    _that.loading = false
+                }).catch(_ =>{
+                    _that.loading = false
+                })
+            },
+        }
+    }
+    const _that = new  XVue(opts)
+    console.log(_that);
+</script>
+<style lang="less" >
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+    .el-card__body{
+        padding: 0px;
+    }
+    .el-card.is-always-shadow {
+        box-shadow: 0 2px 2px 0 rgba(0,0,0,.1) !important;
+    }
+    .el-form-item__label{
+        font-weight: bold;
+    }
+</style>

@@ -1,0 +1,180 @@
+{include file="header.htm"}
+<!--添加司机反馈标签配置-->
+<div id="app">
+    <el-row class="pt-20 pl-20 pr-20 pb-20" >
+            <el-form ref="form" :rules="rules"  :model="form"  label-width="150px" class="pl-20" size="mini">
+                <el-form-item label="反馈标签" required>
+                    <el-input size="mini" v-model="form.type_name"  :maxLength="40" class="label-right"></el-input>
+                </el-form-item>
+                <el-form-item label="是否有二级选项" required>
+                    <el-radio-group v-model="form.is_check" >
+                        <el-radio :label="1"  class="radio-height">是</el-radio>
+                        <el-radio :label="0" class="radio-height">否</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item v-if="form.is_check" label="请选择二级选项" required>
+                    <el-row >
+                        <el-radio :label="1" v-model="form.price" class="radio-height" style="width:100px">电梯:</el-radio>
+                        长(m)
+                        <el-input-number v-model="form.price" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空">
+                        </el-input-number>
+                        宽(m)
+                        <el-input-number v-model="form.price" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空">
+                        </el-input-number>
+                        高(m)
+                        <el-input-number v-model="form.price" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空">
+                        </el-input-number>
+                    </el-row>
+                    <el-row class="pt-5">
+                        <el-radio :label="1" v-model="form.price" class="radio-height" style="width:100px" >托运距离（m）:</el-radio>
+                        <el-input-number v-model="form.price" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空">
+                        </el-input-number>
+                    </el-row>
+                    <el-row class="pt-5">
+                        <el-radio :label="1" v-model="form.price" class="radio-height" style="width:100px">楼梯台阶数（个）:</el-radio>
+                        <el-input-number v-model="form.price" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空">
+                        </el-input-number>
+                    </el-row>
+                </el-form-item>
+                <el-form-item label="是否需要上传图片" required>
+                    <el-radio-group v-model="form.is_check" >
+                        <el-radio :label="1"  class="radio-height">是</el-radio>
+                        <el-radio :label="0" class="radio-height">否</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="是否需要上传视频" required>
+                    <el-radio-group v-model="form.is_check" >
+                        <el-radio :label="1"  class="radio-height">是</el-radio>
+                        <el-radio :label="0" class="radio-height">否</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="启用状态" required>
+                    <el-switch
+                            style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                            v-model="form.seller_id"
+                            active-color="#67C23A"
+                            inactive-color="#dcdfe6"
+                            active-text="启用"
+                            inactive-text="禁用">
+                    </el-switch>
+                </el-form-item>
+                <el-form-item >
+                    <el-button type="primary"  @click="submit" size="small">保 存</el-button>
+                </el-form-item>
+            </el-form>
+    </el-row>
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                test: '',
+                options: [
+                    {
+                        value: 'zhinan',
+                        label: '指南',
+                        children: [
+                            {
+                                value: 'yizhi',
+                                label: '一致'
+                            }, {
+                                value: 'fankui',
+                                label: '反馈'
+                            }, {
+                                value: 'xiaolv',
+                                label: '效率'
+                            }, {
+                                value: 'kekong',
+                                label: '可控'
+                            }]
+                    },
+                    {
+                        value: 'daohang',
+                        label: '导航',
+                        children: [{
+                            value: 'cexiangdaohang',
+                            label: '侧向导航'
+                        }, {
+                            value: 'dingbudaohang',
+                            label: '顶部导航'
+                        }]
+                    }],
+                form: {
+                    seller_id: '',
+                }, // 添加配置数据对象
+                rules: {
+                    username: [
+                        { required: true, trigger: 'blur', message: '请输入用户名称' }
+                    ],
+                }
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            init_data() {
+                const _that = this
+                _that.get_details()
+            },
+            get_details() {
+
+            },
+            submit() {
+
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less" >
+    .label-right{
+        width: 260px;
+    }
+    .radio-height{
+        height: 28px;
+        line-height: 28px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+    .el-card__body{
+        padding: 0px;
+    }
+    .el-card.is-always-shadow {
+        box-shadow: 0 2px 2px 0 rgba(0,0,0,.1) !important;
+    }
+</style>

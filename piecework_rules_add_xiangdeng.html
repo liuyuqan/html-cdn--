@@ -1,0 +1,1020 @@
+{include file="./driver_salary_online/header.htm"}
+<!--添加计件规则-->
+<div id="app">
+    <el-container v-loading="loading">
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 计件规则添加</span>
+            <el-link :href="back_url" :underline="false" class="header_link"><i class="el-icon-arrow-left"></i> 返回列表</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-row>
+                <el-col :span="20" :offset="4">
+                    <el-form ref="form" :rules="rules"  :model="form"  label-width="100px" class="pl-20" size="mini">
+                        <!--步骤一-->
+                        <el-form-item label="城市"  prop="city" >
+                            <el-select v-model="form.city" class="label-right" @change="change_city" clearable filterable placeholder="请选择城市">
+                                <el-option
+                                        v-for="item in city_list"
+                                        :key="item.region_id"
+                                        :label="item.region_name"
+                                        :value="item.region_id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="仓库库房"  required   prop="warehouse">
+                            <el-cascader :options="warehouse_list" style="min-width: 240px" v-model="form.warehouse" :props="{label:'store_name',value:'store_id'}" class="label-right"  clearable filterable placeholder="需先选择城市"></el-cascader>
+                        </el-form-item>
+                        <el-form-item label="商品分类" required>
+                            <el-select v-model="form.goods_type_list" class="label-right" size="mini" clearable filterable multiple placeholder="请选择订单类型"  >
+                                <el-option
+                                        v-for="item in goods_cat_list"
+                                        :key="item.value"
+                                        :label="item.label"
+                                        :value="item.value">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="商品类别" required>
+                            <el-input size="mini" v-model="form.goods_type_name"  clearable :maxLength="40" class="label-right"></el-input> <span class="pl-20 danger">注：即给选择的商品分类起个别名 </span>
+                        </el-form-item>
+                        <el-form-item label="规则类别" required>
+                            <el-row type="flex">
+                                <el-radio-group v-model="form.piece_counting_type" size="mini" @change="form.detail_info = []" >
+                                    <el-radio :label="item.id" style="height: 28px;line-height: 28px;" v-for="item in piece_count_rule_type_list">{{item.name}}</el-radio>
+                                </el-radio-group>
+                            </el-row>
+                        </el-form-item>
+                        <!--计件规则 s-->
+                        <el-row type="flex">
+                            <el-form-item label="计件规则" required>
+                                <!-- 1、按量计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 1">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column  label="重量下限/kg（包含）" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_lower "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="重量上限/kg（不包含）"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_upper "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="计数/件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.unit_num "  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 2、按长度计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 2">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column   label="长度下限/m（包含）" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_lower "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="长度上限/m（不包含）"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_upper "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="计数/件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.unit_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 3、按长度及重量计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 3">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column   label="长度下限/m（包含）" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_lower "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="长度上限/m（不包含）"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_upper "  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="重量下限/kg （包含）" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="重量上限/kg（不包含）"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="计数/件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.unit_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 4、按长度及数量计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 4">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column   label="长度下限（包含）/m" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="长度上限（不包含）/m"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="商品数量及计件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.goods_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="pt-5  pl-20 font_12 danger">注：商品数量及计件，指的是多少个商品计为一件，不满计件数量，剩余商品计为一件</el-row>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 5、按长度、宽度及数量计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 5">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column   label="长度下限（包含）/m" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="长度上限（不包含）/m"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+
+                                        <el-table-column   label="宽度下限（包含）/m" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="宽度上限（不包含）/m"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.weight_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="商品数量及计件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.goods_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="pt-5  pl-20 font_12 danger">注：商品数量及计件，指的是多少个商品计为一件，不满计件数量，剩余商品计为一件</el-row>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 6、按长度、宽度及高度计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 6">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <  <el-table-column   label="长度下限（包含）/m" width="180">
+                                        <template slot-scope="{ row }">
+                                            <el-input-number v-model="row.length_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                        </template>
+                                    </el-table-column>
+                                        <el-table-column  label="长度上限（不包含）/m"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.length_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+
+                                        <el-table-column   label="宽度下限（包含）/m" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.width_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="宽度上限（不包含）/m"   width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.width_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="高度下限（包含）/m" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.height_lower"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column  label="高度上限（不包含）/m"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.height_upper"  width="180" :min="0" :max="99999999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="计数/件"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.unit_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="100">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                                <!-- 7、按箱数计算-->
+                                <el-card class="mt-20"  v-if="form.piece_counting_type == 7">
+                                    <el-table
+                                            ref="table"
+                                            size="mini"
+                                            style="width: 100%"
+                                            :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                            :data="form.detail_info"
+                                            max-height="600px">
+                                        <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                        <el-table-column   label="商品数量 / 片" width="180">
+                                            <template slot-scope="{ row }">
+                                                <el-input-number v-model="row.goods_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   label="计数 / 箱"  width="180" >
+                                            <template slot-scope="{ row }">
+                                                <el-input-number type="number" v-model="row.unit_num"  width="180" :min="0" :max="99999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column   width="180">
+                                            <template slot-scope="scope">
+                                                <el-button icon="el-icon-minus" plain size="mini"  circle @click="()=> { form.detail_info.splice(scope.$index, 1)  } "></el-button>
+                                                <el-button icon="el-icon-plus"  @click="">添加商品</el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                    <el-row class="pt-5  pl-20 font_12 danger">注：不满一箱，按一箱算</el-row>
+                                    <el-row class="text-c pt-5 pb-10">
+                                        <el-button @click="add_table_line" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                    </el-row>
+                                </el-card>
+
+                            </el-form-item>
+                        </el-row>
+                        <!--计件规则 e-->
+
+                        <el-form-item label="不计件商品" required>
+                            <el-radio-group v-model="form.have_exclude_goods" >
+                                <el-radio :label="1"  style="height: 28px;line-height: 28px;">是</el-radio>
+                                <el-radio :label="0" style="height: 28px;line-height: 28px;">否</el-radio>
+                            </el-radio-group> <span class="pl-20 pr-5 danger">  注：单独设置不计件规则商品</span>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-row v-if="form.is_check">
+                                <el-col :span="20">
+                                    <el-button  sizemini v-if="form.is_check"  plain @click="show_add_goods = true">添加商品</el-button>
+                                    <el-button  size="mini"   plain @click="show_goods_list = !show_goods_list">
+                                        <span v-if="show_goods_list">收起列表<i class="el-icon-arrow-down el-icon--right"></i></span>
+                                        <span v-else>展开列表 <i class="el-icon-arrow-right "></i></span>
+                                    </el-button>
+                                    <el-collapse-transition>
+                                        <el-card class="mt-20"  v-if="show_goods_list">
+                                            <el-table
+                                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                                    ref="select_goods_list"
+                                                    :data="list"
+                                                    size="mini"
+                                                    max-height="860px"
+                                                    v-loading ='search_loading'
+                                                    highlight-current-row>
+                                                <el-table-column label="编号">
+                                                    <template scope="scope"><span>{{scope.$index+(listQuery.current_page - 1) * listQuery.page_size + 1}}</span></template>
+                                                </el-table-column>
+                                                <el-table-column  label="商品名称"></el-table-column>
+                                                <el-table-column  label="商品货号" show-overflow-tooltip></el-table-column>
+                                                <el-table-column property="client_mobile" label="商品属性" min-width="150"></el-table-column>
+                                                <el-table-column property="client_mobile" label="物料编码" min-width="150"></el-table-column>
+                                                <el-table-column property="client_mobile" label="商品类别" min-width="150"></el-table-column>
+                                            </el-table>
+                                        </el-card>
+                                    </el-collapse-transition>
+                                </el-col>
+                            </el-row>
+                        </el-form-item>
+
+                        <el-form-item label="有效时间" required>
+                            <el-date-picker
+                                    v-model="form.date"
+                                    type="datetimerange"
+                                    range-separator="至"
+                                    value-format="yyyy-MM-dd"
+                                    start-placeholder="开始日期"
+                                    end-placeholder="结束日期">
+                            </el-date-picker>
+                        </el-form-item>
+                        <el-form-item label="配置状态" required>
+                            <el-switch
+                                    style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                                    v-model="form.is_enable"
+                                    active-color="#67C23A"
+                                    inactive-color="#dcdfe6"
+                                    active-value="1"
+                                    inactive-value="0"
+                                    active-text="启用"
+                                    inactive-text="禁用">
+                            </el-switch>
+                        </el-form-item>
+                        <el-form-item >
+                            <el-button   @click="() => {  }" size="small">重 置  </el-button>
+                            <el-button type="primary"  @click="" size="small">保 存  </el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </el-main>
+    </el-container>
+    <!--添加商品列表-->
+    <el-dialog title="商品列表" :visible.sync="show_add_goods">
+        <el-row class="filter-container">
+            <el-input type="mini" v-model="listQuery.goods_name" size="mini" class="filter-item" placeholder="商品名称"></el-input>
+            <el-input type="mini" v-model="listQuery.goods_type"  size="mini" class="filter-item" placeholder="商品货号"></el-input>
+            <el-input type="mini" v-model="listQuery.goods_type"  size="mini" class="filter-item" placeholder="物料编码"></el-input>
+            <el-button class="filter-btn" size="mini" type="primary"  icon="el-icon-search" @click="search_goods_list">搜索</el-button>
+            <el-button class="filter-btn" size="mini" icon="el-icon-plus" @click="">添加</el-button>
+        </el-row>
+        <el-table
+                @selection-change="select_goods"
+                :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                ref="singleTable"
+                :data="goods_list"
+                size="mini"
+                max-height="860px"
+                v-loading ='search_loading'
+                highlight-current-row>
+            <el-table-column type="selection" width="55" ></el-table-column>
+            <el-table-column label="编号">
+                <template scope="scope"><span>{{scope.$index+(listQuery.current_page - 1) * listQuery.page_size + 1}}</span></template>
+            </el-table-column>
+            <el-table-column  label="商品名称"></el-table-column>
+            <el-table-column  label="商品货号" show-overflow-tooltip></el-table-column>
+            <el-table-column property="client_mobile" label="商品属性" min-width="150"></el-table-column>
+            <el-table-column property="client_mobile" label="物料编码" min-width="150"></el-table-column>
+            <el-table-column property="client_mobile" label="商品类别" min-width="150"></el-table-column>
+        </el-table>
+        <el-pagination
+                :current-page.sync="listQuery.page"
+                :page-size.sync="listQuery.page_size"
+                :layout="layout"
+                :page-sizes="pageSizes"
+                :total="listQuery.total"
+                v-bind="$attrs"
+                @size-change="search_goods_list"
+                @current-change="search_goods_list"
+        />
+    </el-dialog>
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                loading: false,
+                back_url: './driver_salary_online.php?act=piecework_rules_list',
+                listQuery: {},
+                show_add_goods: false,
+                search_loading: false,
+                show_goods_list: false,
+                city_list: [],
+                warehouse: [],
+                warehouse_list: [],
+                goods_cat_list: [],
+                piece_count_rule_type_list: [],
+                options : [],
+                source: 1,
+                goods_list: [],
+                form: {
+                    goods_type_list: [],
+                    detail_info: [],
+                }, // 添加配置数据对象
+                rules: {
+                    city: [
+                        { required: true, trigger: 'change', message: '请选择城市' }
+                    ],
+                    piece_counting_type: [
+                        { required: true, trigger: 'change', message: '请选择规则分类' }
+                    ],
+                    goods_type_name: [
+                        { required: true, trigger: 'bluer', message: '请填写商品类别' }
+                    ],
+                    warehouse: [
+                        { type: 'array', required: true, message: '请选择仓库库房', trigger: 'change'},
+                    ],
+                    goods_type_list: [
+                        { type: 'array', required: true, message: '请选择商品分类', trigger: 'change'},
+                    ],
+                }
+            }
+        },
+        created() {
+            const  query = this.parseQuery()
+            if(query['rule_id']) {
+                this.form.rule_id = query['rule_id']
+                console.log(this.form.rule_id)
+            }
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({  source: _that.source })
+                _that.city_list = data.city_list
+                _that.goods_cat_list = data.goods_cat_list || []
+                _that.piece_count_rule_type_list = data.piece_count_rule_type_list || []
+                if (this.form.rule_id) {
+                    _that.get_details()
+                }
+            },
+            get_details() {
+                const _that = this;
+                _that.loading = true
+                get_driver_config_detail({ ds_id: _that.form.ds_id }).then(res =>{
+                    _that.form = res.data
+                    _that.form.shipping_fee = res.data.shipping_fee || {}
+                    _that.form.banlou_fee = res.data.banlou_fee || {}
+                    _that.form.consign_fee = res.data.consign_fee || {}
+                    _that.form.tonnage_fee = res.data.tonnage_fee || {}
+                    _that.form.warehouse = [ _that.form.house_id, _that.form.store_id]
+                    _that.form.date = [_that.form.expire_date_start, _that.form.expire_date_end]
+                    _that.change_city(_that.form.city)
+                }).catch(_ =>{
+                    _that.loading = false
+                })
+            },
+            change_city(city) {
+                _that.warehouse_list = []
+                if(city) {
+                    get_warehouse({ city: city, source: _that.source }).then(res => {
+                        _that.warehouse_list = res.data || []
+                        _that.loading = false
+                    })
+                }
+            },
+
+            select_goods(data) {
+                console.log(data)
+            },
+            search_goods_list() {
+
+            },
+            submit() {
+
+            },
+            /**
+             * 选择性能 =》代码有冗余
+             * @returns {*}
+             */
+            add_table_line() {
+                const  piece_counting_type = _that.form.piece_counting_type
+                const list = _that.form.detail_info;
+                if(!piece_counting_type) {
+                    return _that.$message({ type: 'warning', message: '请选择规则类别' })
+                }
+                let msg = ''
+                let is_pass = true
+                // todo 1、属性为空判断
+                switch (piece_counting_type) {
+                    case '1':
+                        // 重量
+                        for (let i = 0;i < list.length; i++) {
+                            const item = list[i]
+                            if(!item.weight_lower || !item.weight_upper) { msg = '重量上下限不可为空'}
+                            if(!item.unit_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message: '第'+ (i+1) + '行'+ msg  })
+                                break
+                            } else {
+                                // todo 2、上限判断
+                                is_pass = _that.check_lower_upper_one(list, i, 'weight_lower', 'weight_upper','重量')
+                                if(!is_pass) {
+                                    break
+                                }
+                            }
+                        }
+                        break;
+                    case '2':
+                        //长度
+                        for (let i = 0;i < list.length; i++) {
+                            const item = list[i]
+                            if(!item.length_lower || !item.length_upper) { msg = '长度上下限不可为空'}
+                            if(!item.unit_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message: msg = '第'+ (Number(i)+1) + '行'+ msg })
+                                break
+                            } else {
+                                // todo 2、上限判断
+                                is_pass = _that.check_lower_upper_one(list , i,'length_lower', 'length_upper', '长度')
+                                if(!is_pass) { break }
+                            }
+                        }
+                        break
+                    case '3':
+                        for (let i = 0;i < list.length; i++) {
+                            const item = list[i]
+                            //长度、重量
+                            if(!item.length_lower || !item.length_upper) { msg = '长度上下限不可为空'}
+                            if(!item.weight_lower || !item.weight_upper) { msg = '重量上下限不可为空'}
+                            if(!item.unit_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message:  '第'+ (Number(i)+1) + '行'+ msg })
+                                break
+                            } else {
+                                // todo 2、上限判断
+                                is_pass = _that.check_lower_upper_equal(list , i,'length_lower', 'length_upper', '长度', 3)
+                                if(!is_pass) { break }
+                                is_pass = _that.check_lower_upper_equal(list , i,'weight_lower', 'weight_upper', '重量', 3)
+                                if(!is_pass) { break }
+                            }
+                        }
+                        break
+                    case '4':
+                        for (const i in list) {
+                            const item = list[i]
+                            //按长度及数量
+                            if(!item.length_lower || !item.length_upper) { msg = '长度上下限不可为空'}
+                            if(!item.goods_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message:  '第'+ (Number(i)+1) + '行'+ msg})
+                                break
+                            } else {
+                                // todo 2、上限判断
+                                is_pass = _that.check_lower_upper(list , i, 'length_lower', 'length_upper', '长度')
+                            }
+                        }
+                        break
+                    case '5':
+                        //按长度、宽度及数量计算
+                        for (const i in list) {
+                            const item = list[i]
+                            if(!item.length_lower || !item.length_upper) { msg = '长度上下限不可为空'}
+                            if(!item.width_lower || !item.width_upper) { msg = '宽度上下限不可为空'}
+                            if(!item.weight_lower || !item.weight_upper) { msg = '重量上下限不可为空'}
+                            if(!item.unit_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message:  '第'+ (Number(i)+1) + '行'+ msg })
+                                break
+                            } else {
+                                is_pass = _that.check_lower_upper(list,'length_lower', 'length_upper', '长度')
+                                is_pass = _that.check_lower_upper('width_lower', 'width_upper', '宽度')
+                            }
+                        }
+                        break
+                    case '6':
+                        // 长度、宽度及高度
+                        for (const i in list) {
+                            const item = list[i]
+                            if(!item.length_lower || !item.length_upper) { msg = '长度上下限不可为空'}
+                            if(!item.width_lower || !item.width_upper) { msg = '宽度上下限不可为空'}
+                            if(!item.height_lower || !item.height_upper  ) { msg = '高度上下限不可为空'}
+                            if(!item.unit_num) { msg = '计件数量不可为空'}
+                            if(msg != '') {
+                                is_pass = false
+                                _that.$message({ type: 'warning', message:  '第'+ (Number(i)+1) + '行'+ msg })
+                                break
+                            } else {
+                                is_pass = _that.check_lower_upper(list,'length_lower', 'length_upper', '长度')
+                                is_pass = _that.check_lower_upper(list,'width_lower', 'width_upper', '宽度')
+                                is_pass = _that.check_lower_upper('height_lower', 'height_upper', '高度')
+                            }
+
+                        }
+                        break
+                    case '7':
+                        // 按箱数计算
+                        break
+                }
+           /*     list.sort(function(obj1, obj2) {
+                    let val1 = obj1[upper_name]
+                    let val2 = obj2[upper_name]
+                    return val1 - val2
+                })*/
+                /*
+                if(msg != '') {
+                    is_pass = false
+                    msg = '第'+ (Number(i)+1) + '行'+ msg'
+                    _that.$message({ type: 'warning', message: msg  })
+                }*/
+
+                console.log('上下限判断', is_pass)
+                 /*          if(is_pass) {
+                    const list = _that.form.detail_info;
+                    switch (piece_counting_type) {
+                        case '1':
+                            is_pass = _that.check_lower_upper(list, 'weight_lower', 'weight_upper','重量')
+                            break
+                        case '2':
+                            is_pass = _that.check_lower_upper(list , 'length_lower', 'length_upper', '长度')
+                            break
+                        case '3':
+                            is_pass = _that.check_lower_upper('length_lower', 'length_upper', '长度')
+                            break
+                        case '4':
+                            break
+                        case '5':
+                            break
+                        case '6':
+                            break
+                        case '7':
+                            break
+                    }
+                }*/
+                console.log('最后结果',is_pass)
+                if(is_pass) {
+                    _that.push_array(_that.form)
+                }
+            },
+            /**
+             * 检查上下限是否有重叠的
+             *@param list 包含当前上下数据的数组
+             * @param lower_name 下限 字段名称
+             * @param upper_name 上限 下限字段
+             * @param msg 上限 下限字段描述 （如距离、重量）
+             * @returns {boolean}
+             */
+            check_lower_upper(list, lower_name, upper_name, msg) {
+                console.log(lower_name, upper_name, msg)
+                console.log('list', list)
+                let is_pass = true
+                let error_msg
+                try {
+                    if(list && list.length> 0) {
+                        for (let i = 0; i < list.length; i++) {
+                            const item = list[i]
+                            const lower_value = item[lower_name]
+                            const upper_value = item[upper_name]
+                            //todo 1、判断是上下限 大小 为一行服务的
+                            error_msg = ' 第'+(i+1) + '行'+ msg
+                            if(upper_value <= lower_value ) {
+                                error_msg =''+error_msg+'下限不能大于或等于上限~'
+                                _that.$message({ type: 'warning', message: error_msg })
+                                is_pass =  false;
+                                break;
+                            }
+                            //todo 2、判断是否重叠
+                            if(list.length> 1) {
+                                for(let j = 0; j < list.length; j++) {
+                                    const _item = list[j]
+                                    if(i!=j) {
+                                        const _lower_value = _item[lower_name]
+                                        const _upper_value = _item[upper_name]
+                                        // todo 3、判断添加属性大小是否正确
+                                        error_msg = ' 第'+(j+1) + '行' + msg
+                                        if(_upper_value <= _lower_value ) {
+                                            error_msg =''+ error_msg+'下限不能大于或等于上限1~'
+                                            is_pass =  false;
+                                            break;
+                                        }
+                                        // todo 4、判断是否重叠
+                                        is_pass = _that.filter_limit(lower_value, upper_value, _lower_value, _upper_value)
+                                        if(!is_pass) {
+                                            is_pass =  false;
+                                            error_msg = error_msg + '上下限有重叠'
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if(!is_pass) {
+                                _that.$message({ type: 'warning', message: error_msg })
+                                break;
+                            } else{
+                                // 排序
+                                list.sort(function(obj1, obj2) {
+                                    let val1 = obj1[upper_name]
+                                    let val2 = obj2[upper_name]
+                                    return val1 - val2
+                                })
+                            }
+                        }
+                    }
+                } catch (e) {
+                    _that.$message({ type: 'warning', message: '添加出错' })
+                    is_pass = false
+                }
+                return is_pass
+            },
+            /**
+             * 检查上下限是否有重叠的
+             *@param list 包含当前上下数据的数组
+             * @param lower_name 下限 字段名称
+             * @param upper_name 上限 下限字段
+             * @param msg 上限 下限字段描述 （如距离、重量）
+             * @returns {boolean}
+             */
+            check_lower_upper_one(list, i, lower_name, upper_name, msg) {
+                let is_pass = true
+                let error_msg
+                try {
+                    if(!list || !lower_name || !msg) { throw new Error('为空') }
+                    const item = list[i]
+                    const lower_value = item[lower_name]
+                    const upper_value = item[upper_name]
+                    console.log(lower_value,upper_value)
+                    //todo 1、判断是上下限 大小 为一行服务的
+                    error_msg = ' 第'+(i+1) + '行'+ msg
+                    console.log(lower_value,upper_value,upper_value <= lower_value)
+                    if(upper_value <= lower_value ) {
+                        error_msg = error_msg + '下限不能大于或等于上限~'
+                        _that.$message({ type: 'warning', message: error_msg })
+                        return false
+                    }
+                    //todo 2、判断是否重叠
+                    if(list.length> 1) {
+                        for(let j = 0; j < list.length; j++) {
+                            const _item = list[j]
+                            if(i!=j) {
+                                const _lower_value = _item[lower_name]
+                                const _upper_value = _item[upper_name]
+                                // todo 3、判断添加属性大小是否正确
+                                error_msg = ' 第'+(j+1) + '行' + msg
+                                if(_upper_value <= _lower_value ) {
+                                    error_msg = error_msg + '下限不能大于或等于上限~'
+                                    is_pass =  false;
+                                    break;
+                                }
+                                // todo 4、判断是否重叠
+                                is_pass = _that.filter_limit(lower_value, upper_value, _lower_value, _upper_value)
+                                if(!is_pass) {
+                                    is_pass =  false;
+                                    error_msg = error_msg + '上下限有重叠'
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if(!is_pass) {
+                         _that.$message({ type: 'warning', message: error_msg })
+                    } else{
+                        // 排序
+                        list.sort(function(obj1, obj2) {
+                            let val1 = obj1[upper_name]
+                            let val2 = obj2[upper_name]
+                            return val1 - val2
+                        })
+                    }
+                } catch (e) {
+                    console.log(e)
+                    _that.$message({ type: 'warning', message: '添加出错' })
+                    is_pass = false
+                }
+                return is_pass
+            },
+            /**
+             * 检查上下限是否有重叠的 不包含相等 相等另外判断------>定制！！！！！！！！
+             *@param list 包含当前上下数据的数组
+             * @param lower_name 下限 字段名称
+             * @param upper_name 上限 下限字段
+             * @param msg 上限 下限字段描述 （如距离、重量）
+             * @returns {boolean}
+             */
+            check_lower_upper_equal(list, i, lower_name, upper_name, msg, piece_counting_type) {
+                let is_pass = true
+                let error_msg
+                try {
+                    if(!list || !lower_name || !msg) { throw new Error('为空') }
+                    const item = list[i]
+                    const lower_value = item[lower_name]
+                    const upper_value = item[upper_name]
+                    console.log(lower_value,upper_value)
+                    //todo 1、判断是上下限 大小 为一行服务的
+                    error_msg = ' 第'+(i+1) + '行'+ msg
+                    console.log(lower_value,upper_value,upper_value <= lower_value)
+                    if(upper_value <= lower_value ) {
+                        error_msg = error_msg + '下限不能大于或等于上限~'
+                        _that.$message({ type: 'warning', message: error_msg })
+                        return false
+                    }
+                    //todo 2、判断是否重叠
+                    if(list.length> 1) {
+                        for(let j = 0; j < list.length; j++) {
+                            const _item = list[j]
+                            if(i!=j) {
+                                const _lower_value = _item[lower_name]
+                                const _upper_value = _item[upper_name]
+                                // todo 3、判断添加属性大小是否正确
+                                error_msg = ' 第'+(j+1) + '行' + msg
+                                if(_upper_value <= _lower_value ) {
+                                    error_msg = error_msg + '下限不能大于或等于上限~'
+                                    is_pass =  false;
+                                    break;
+                                }
+                                // todo 4、判断是否是有两个上限的(可相等)
+                                if(piece_counting_type == 3) {
+                                    //1) 长度相等(length_lower, length_upper) 重量(weight_lower,weight_upper) 重量满足上下限不重叠  满足return true
+                                    if(item.length_lower == _item.length_lower && item.length_upper == _item.length_upper) {
+                                        is_pass = _that.filter_limit(item.weight_lower, item.weight_upper, _item.weight_lower, _item.weight_upper)
+                                        console.log('直接判断长度是否有相等的-重量满足上下限不重叠', is_pass)
+                                        if(!is_pass){
+                                            error_msg = ' 第'+(j+1) + '行'  + '重量上下限有重叠'
+                                            break
+                                        }
+                                        //2) 重量相等  且长度满足上下限不重叠 return true
+                                    } else if(item.weight_lower == _item.weight_lower && item.weight_upper == _item.weight_upper) {
+                                        is_pass = _that.filter_limit(item.length_lower, item.length_upper, _item.length_lower, _item.length_upper)
+                                        console.log('直接判断-重量是否有相等的满足上下限不重叠', is_pass)
+                                        if(!is_pass){
+                                            error_msg = ' 第'+(j+1) + '行'  + '长度上下限有重叠'
+                                            break
+                                        }
+                                    } else{
+                                        is_pass = _that.filter_limit(lower_value, upper_value, _lower_value, _upper_value)
+                                        error_msg = error_msg + '上下限有重叠'
+                                        if(!is_pass) {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                    if(!is_pass) {
+                        _that.$message({ type: 'warning', message: error_msg })
+                    }
+                } catch (e) {
+                    console.log(e)
+                    _that.$message({ type: 'warning', message: '添加出错' })
+                    is_pass = false
+                }
+                return is_pass
+            },
+            push_array(object) {
+                if(object.detail_info) {
+                    object.detail_info.push({})
+                } else {
+                    this.$set(object, 'detail_info',[{}] )
+                }
+            },
+            /**
+             * 判断上下限
+             * @param down 下限
+             * @param up 上限
+             * @returns {boolean}
+             */
+            filter_limit(lower, upper, new_lower, new_upper ) {
+                console.log('lower, upper,', lower, upper,)
+                console.log('new_lower, new_upper', new_lower, new_upper)
+                // todo 1、新添加 上下限 都包含在内 此规则在添加的上限大于下限基础上面
+                if(lower <= new_lower && new_upper <= upper) {
+                    return false;
+                }
+                // todo 2、下限包含
+                if(lower <= new_lower && new_lower < upper) {
+                    return false;
+                }
+                // todo 3、上线包含
+                if(lower < new_upper && new_upper <= upper) {
+                    return false;
+                }
+                // todo 4、新添加 下限小于当前下限 上限大于当前上限
+                if(new_lower <= lower  && new_upper >= upper) {
+                    return false;
+                }
+                return true
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+    console.log(_that);
+</script>
+<style lang="less" >
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+    .el-card__body{
+        padding: 0px;
+    }
+    .el-card.is-always-shadow {
+        box-shadow: 0 2px 2px 0 rgba(0,0,0,.1) !important;
+    }
+</style>

@@ -1,0 +1,309 @@
+{include file="header.htm"}
+<!--司机反馈标签配置列表-->
+<div id="app">
+
+    <el-container >
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 司机反馈标签配置列表</span>
+            <el-link @click="add_show()" :underline="false" class="header_link">添加配置</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-row class="filter-container">
+                <span class="filter-label">反馈标签</span>
+                <el-input size="mini" v-model.trim="listQuery.label_name" class="filter-item"  clearable placeholder="请输入类别关键词"></el-input>
+                <span class="filter-label">是否有二级选项</span>
+                <el-select v-model="listQuery.have_second" class="filter-item" size="mini" clearable placeholder="是否有二级选项">
+                    <el-option label="是" :value="1"></el-option>
+                    <el-option label="否" :value="0"></el-option>
+                </el-select>
+                <span class="filter-label">状态</span>
+                <el-select v-model="listQuery.is_enable" class="filter-item" size="mini" clearable placeholder="请选择开启状态">
+                    <el-option label="开启" :value="1"></el-option>
+                    <el-option label="禁用" :value="0"></el-option>
+                </el-select>
+                <el-button class="filter-btn" size="mini" type="primary" icon="el-icon-search" @click="search_list">搜索</el-button>
+                <el-button class="filter-btn" size="mini" icon="el-icon-refresh-left" @click="reset">重置</el-button>
+            </el-row>
+            <el-row  type="flex">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="list"
+                        max-height="860px"
+                        v-loading ='loading'
+                        highlight-current-row>
+                    <el-table-column label="编号"property="label_id" ></el-table-column>
+                    <el-table-column property="label_name"  label="反馈标签"></el-table-column>
+                    <el-table-column property="have_second_name" label="是否有二级选项" ></el-table-column>
+                    <el-table-column property="second_type_name" label="二级选项" min-width="150"></el-table-column>
+                    <el-table-column property="need_upload_img_name" label="是否需要上传图片" min-width="150"></el-table-column>
+                    <el-table-column property="need_upload_video_name" label="是否需要上传视频" min-width="150"></el-table-column>
+                    <el-table-column  label="当前状态"  min-width="80" >
+                        <template slot-scope="{ row }" >
+                            <el-tag v-if="row.is_enable == 1" type="success">已启用</el-tag>
+                            <el-tag v-else type="info">已禁用</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column  label="操作"  min-width="100" >
+                        <template slot-scope="{ row }"  >
+                            <el-link  @click="edit_show(row)" type="primary" :underline="false">编辑</el-link>
+                            <el-popover
+                                    :title=" row.is_enable == 0 ? '你确定要启用吗？': '你确定要禁用吗？' "
+                                    placement="top"
+                                    width="160"
+                                    @hide=""
+                                    v-model="row.visible">
+                                <div style="text-align: right; margin: 0">
+                                    <el-button size="mini" type="text" @click="row.visible = false">取消</el-button>
+                                    <el-button type="primary" size="mini" @click="change_status(row)">确定</el-button>
+                                </div>
+                                <span slot="reference">
+                                <el-link  v-if="row.is_enable == 1" type="danger" class="mr-5"   :underline="false">禁用</el-link>
+                                <el-link v-else type="success" class="mr-5" :underline="false">启用</el-link>
+                                </span>
+                            </el-popover>
+                            <el-popover
+                                    title="你确定要删除吗？"
+                                    placement="top"
+                                    width="160"
+                                    v-model="row.visible1">
+                                <div style="text-align: right; margin: 0">
+                                    <el-button size="mini" type="text" @click="row.visible1 = false">取消</el-button>
+                                    <el-button type="primary" size="mini"  @click="delete_conf(row)">确定</el-button>
+                                </div>
+                                <el-link  slot="reference" type="info" :underline="false">删除</el-link>
+                            </el-popover>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-row>
+        </el-main>
+    </el-container>
+    <el-row class="pt-20 fr">
+        <el-pagination
+                :current-page.sync="listQuery.page"
+                :page-size.sync="listQuery.size"
+                :layout="layout"
+                :page-sizes="pageSizes"
+                :total="listQuery.total"
+                v-bind="$attrs"
+                @size-change="search_list"
+                @current-change="search_list"
+        />
+    </el-row>
+
+    <el-dialog title="反馈标签配置" :visible.sync="show_add"  :destroy-on-close="true" >
+        <el-row v-if="show_add">
+            <el-col :span="20" :offset="2">
+                <el-form ref="form" :rules="rules"  :model="form"  label-width="150px"  size="mini">
+                    <el-form-item label="反馈标签" required prop="label_name">
+                        <el-input size="mini" v-model="form.label_name" :disabled="form.label_id"  :maxLength="40" class="label-right"></el-input>
+                    </el-form-item>
+                    <el-form-item label="是否有二级选项"  required  prop="have_second">
+                        <el-radio-group v-model="form.have_second" :disabled="form.label_id"  class="radio-height">
+                            <el-radio :label="1"  >是</el-radio>
+                            <el-radio :label="0" >否</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-form-item v-if="form.have_second"  label="二级选项" required prop="second_type">
+                        <el-radio-group v-model="form.second_type" :disabled="form.label_id" class="radio-height">
+                            <el-radio :label="1" >电梯长宽高</el-radio>
+                            <el-radio :label="2" >托运距离</el-radio>
+                            <el-radio :label="3" >楼梯台阶数</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-form-item label="是否需要上传图片" required  prop="need_upload_img">
+                        <el-radio-group v-model="form.need_upload_img"  class="radio-height">
+                            <el-radio :label="1" >是</el-radio>
+                            <el-radio :label="0" >否</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-form-item label="是否需要上传视频" required prop="need_upload_video">
+                        <el-radio-group v-model="form.need_upload_video"   class="radio-height">
+                            <el-radio :label="1"  >是</el-radio>
+                            <el-radio :label="0" >否</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    <el-form-item label="启用状态" required>
+                        <el-switch
+                                style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                                v-model="form.is_enable"
+                                active-color="#67C23A"
+                                inactive-color="#dcdfe6"
+                                :active-value="1"
+                                :inactive-value="0"
+                                active-text="启用"
+                                inactive-text="禁用">
+                        </el-switch>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <el-row slot="footer">
+            <el-button  @click="show_add = false" size="small">取 消</el-button>
+            <el-button type="primary"  @click="submit" size="small">保 存</el-button>
+        </el-row>
+    </el-dialog>
+</div>
+<script>
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                add_href: './driver_salary_online.php?act=driver_label_conf_add&label_id=',
+                loading: false,
+                show_add: false,
+                listQuery: {
+                    size: 20,
+                    page: 1,
+                    total: 0
+                },
+                form: {
+                    is_enable: 1
+                },
+                rules: {
+                    label_name: [
+                        { required: true, trigger: 'blur', message: '反馈标签名称不可为空' },
+                        { required: true, trigger: 'change', message: '反馈标签名称不可为空' }
+                    ],
+                    have_second: [
+                        { required: true, trigger: 'change', message: '请选择是否有二级选项' }
+                    ],
+                    need_upload_img: [
+                        { required: true, trigger: 'change', message: '请选择是否上传图片' }
+                    ],
+                    need_upload_video: [
+                        { required: true, trigger: 'change', message: '请选择是否上传视频' }
+                    ]
+                },
+                list: []
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            init_data() {
+                this.get_list()
+            },
+            get_list() {
+                this.loading = true
+                getDriverFeedbackLabelList(this.listQuery).then(res => {
+                    this.loading = false
+                    this.list = res.data.data_list || []
+                    this.listQuery.total = Number(res.data.data_total || 0)
+                }).catch(_ => {
+                    this.loading = false
+                })
+            },
+            change_status(row) {
+                disableDriverFeedbackLabelOne({ label_id: row.label_id }).then(res => {
+                    if(res.code == 200 ) {
+                        row.is_enable == 1 ?  _that.$set(row, 'is_enable', 0) : _that.$set(row, 'is_enable', 1)
+                    }
+                    _that.loading = false
+                    row.visible = false
+                }).catch(_ => {
+                    _that.loading = false
+                })
+            },
+            delete_conf(row) {
+                DriverFeedbackLabelDelete({ label_id: row.label_id }).then(res => {
+                    if(res.code == 200 ) {
+                        _that.get_list()
+                    }
+                })
+            },
+            submit() {
+                this.$refs.form.validate(valid => {
+                    if(valid) {
+                        if(_that.form.have_second == 1 && !_that.form.second_type) {
+                            return _that.$message({ type: 'warning', message: '二级选项不可为空'})
+                        } else if(_that.form.have_second == 0){
+                            delete _that.form.second_type
+                        }
+                        if(_that.form.label_id) {
+                            driverFeedbackLabelEdit(_that.form).then(res => {
+                                if(res.code == 200 ) {
+                                    _that.get_list()
+                                    _that.show_add= false
+                                }
+                            })
+                        } else {
+                            driverFeedbackLabelAdd(_that.form).then(res => {
+                                if(res.code == 200 ) {
+                                    _that.get_list()
+                                    _that.show_add= false
+                                }
+                            })
+                        }
+                    }
+                })
+            },
+            edit_show(row) {
+                _that.form = JSON.parse(JSON.stringify(row))
+                _that.show_add = true
+            },
+            add_show(row) {
+                _that.form = { is_enable: 1 }
+                _that.show_add = true
+            },
+            search_list() {
+                this.page = 1
+                this.get_list()
+            },
+            reset() {
+                this.listQuery = {
+                    page_size: 20,
+                    page: 1,
+                    total: 0
+                }
+                this.get_list()
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less">
+    .radio-height{
+        height: 28px;
+        line-height: 36px;
+    }
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+</style>

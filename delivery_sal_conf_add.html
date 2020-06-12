@@ -1,0 +1,977 @@
+{include file="./driver_salary_online/header.htm"}
+<div id="app">
+    <el-container v-loading="loading">
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>-添加配送员工资结算配置</span>
+            <el-link :href="back_url" :underline="false" class="header_link"><i class="el-icon-arrow-left"></i> 返回列表</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-row>
+                <el-col  :offset="4"  :span="16">
+                    <el-form style="float: inherit" ref="form"  :rules="rules"  :model="form"  label-width="120px" class="pl-20" size="mini">
+                        <!--步骤一-->
+                        <transition name="el-fade-in-linear">
+                            <el-row v-show="current_step == 1">
+                                <el-form-item label="城市"  prop="city" >
+                                    <el-select v-model="form.city" class="label-right" @change="change_city" clearable filterable placeholder="请选择城市">
+                                        <el-option
+                                                v-for="item in city_list"
+                                                :key="item.region_id"
+                                                :label="item.region_name"
+                                                :value="item.region_id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="仓库库房"  required   prop="warehouse">
+                                    <el-cascader :key="form.city" :options="warehouse_list" style="min-width: 240px" v-model="form.warehouse" :props="{label:'store_name',value:'store_id'}" class="label-right"  clearable filterable placeholder="需先选择城市"></el-cascader>
+                                </el-form-item>
+                                <el-form-item label="配送员标签"  prop="driver_tag">
+                                    <el-select v-model="form.driver_tag" class="label-right" size="mini" clearable filterable  placeholder="请选择配送员标签"  >
+                                        <el-option
+                                                v-for="item in driver_tag_list"
+                                                :key="item.tag_id"
+                                                :label="item.tag_name"
+                                                :value="item.tag_id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="订单类型"  prop="order_type_ids">
+                                    <el-select v-model="form.order_type_ids" class="label-right" size="mini" clearable filterable multiple placeholder="可多选"  >
+                                        <el-option
+                                                v-for="item in order_type_list"
+                                                :key="item.value"
+                                                :label="item.name"
+                                                :value="item.value">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="有效时间"   prop="date">
+                                    <el-date-picker
+                                            v-model="form.date"
+                                            type="datetimerange"
+                                            format="yyyy-MM-dd"
+                                            value-format="yyyy-MM-dd"
+                                            range-separator="至"
+                                            start-placeholder="开始日期"
+                                            end-placeholder="结束日期">
+                                    </el-date-picker>
+                                </el-form-item>
+                                <el-form-item label="配置状态" required>
+                                    <el-switch
+                                            style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                                            v-model="form.is_enable"
+                                            active-color="#67C23A"
+                                            inactive-color="#dcdfe6"
+                                            active-value="1"
+                                            inactive-value="0"
+                                            active-text="启用"
+                                            inactive-text="禁用">
+                                    </el-switch>
+                                </el-form-item>
+                                <el-form-item label="结算费用类型"  prop="settle_type_ids">
+                                    <el-select v-model="form.settle_type_ids" class="label-right" size="mini"  clearable filterable multiple placeholder="请选择结算费用类型"  >
+                                        <el-option
+                                                v-for="item in settle_type_list"
+                                                :key="item.id"
+                                                :label="item.name"
+                                                :value="item.id">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item >
+                                    <el-button type="primary"  @click="next_step()" size="small">下一步 (1/{{count_step}}) </el-button>
+                                </el-form-item>
+                            </el-row>
+                        </transition>
+                        <!--步骤二-->
+                        <transition name="el-zoom-in-center">
+                            <el-row v-show="current_step == 2" >
+                                <!--配送费配置 s-->
+                                <el-row  type="flex" v-if="form.settle_type_ids.includes('1')">
+                                    <el-form-item label="配送费" required >
+                                        <el-select  v-model="form.shipping_fee.settle_type_child" @change="() => { form.shipping_fee.child_data=[] }" class="label-right" size="mini"  clearable filterable  placeholder="请选择配送费规则"  >
+                                            <el-option
+                                                    v-for="item in moving_cost_options"
+                                                    :key="item.value"
+                                                    :label="item.label"
+                                                    :value="item.value">
+                                            </el-option>
+                                        </el-select>
+                                        <el-card class="mt-20" v-if="form.shipping_fee.settle_type_child">
+                                            <el-table
+                                                    ref="shipping_fee"
+                                                    size="mini"
+                                                    style="width: 100%"
+                                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                                    :data="form.shipping_fee.child_data"
+                                                    max-height="600px">
+                                                <el-table-column label="" fixed  type="index" width="40"></el-table-column>
+                                                <el-table-column v-if="form.shipping_fee.settle_type_child == 1" min-width="300" property="client_name" label="区域" >
+                                                    <template slot-scope="{ row }">
+                                                        <el-select v-model="row.district_ids"  style="width:100%" size="mini" clearable filterable multiple placeholder="请选择区域"  >
+                                                            <el-option
+                                                                    v-for="item in districts"
+                                                                    :disabled="item.disabled"
+                                                                    :key="item.district_id"
+                                                                    :label="item.region_name"
+                                                                    :value="item.district_id">
+                                                            </el-option>
+                                                        </el-select>
+                                                    </template>
+                                                </el-table-column>
+                                                <!--  2、按单量结算-->
+                                                <el-table-column v-if="form.shipping_fee.settle_type_child == 2"  label="单量下限(包含)" width="200">
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.order_num_lower " width="220" :min="row.min" :max="999999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column v-if="form.shipping_fee.settle_type_child == 2"  label="单量上限(不包含)" width="220" >
+                                                    <template slot-scope="scope">
+                                                        <el-input-number v-model="scope.row.order_num_upper"   width="220" :min="0" :max="999999999" :step="1" :precision="0" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column  label="配送费" min-width="220" >
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.unit_price" style="width:100%" :min="0" :max="99999999" :step="10" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column   width="100" >
+                                                    <template slot-scope="scope">
+                                                        <el-button  icon="el-icon-minus" circle  @click="()=> { form.shipping_fee.child_data.splice(scope.$index, 1)  } "></el-button>
+                                                        <!--<i v-if="scope.row.no_pass" class="el-icon-warning-outline danger warning_icon pl-5" ></i>-->
+                                                    </template>
+                                                </el-table-column>
+                                            </el-table>
+                                            <el-row class="text-c pt-10 mb-10">
+                                                <el-button @click="add_shopping_fee()" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                            </el-row>
+                                        </el-card>
+                                    </el-form-item>
+                                </el-row>
+                                <!--配送费配置 e-->
+
+                                <!--搬楼费配置 s-->
+                                <el-row type="flex"  v-if="form.settle_type_ids.includes('2')">
+                                    <el-form-item label="搬楼费" required>
+                                        <el-select v-model="form.banlou_fee.settle_type_child" class="label-right" size="mini" @change="() => { form.banlou_fee.child_data=[] }" clearable filterable  placeholder="请选择搬楼费规则"  >
+                                            <el-option
+                                                    v-for="item in banlou_fee_options"
+                                                    :key="item.value"
+                                                    :label="item.label"
+                                                    :value="item.value">
+                                            </el-option>
+                                        </el-select>
+                                        <el-card class="mt-20" v-if="form.banlou_fee.settle_type_child" >
+                                            <el-table
+                                                    ref="banlou_fee"
+                                                    size="mini"
+                                                    style="width: 100%"
+                                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                                    :data="form.banlou_fee.child_data"
+                                                    max-height="600px">
+                                                <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                                <el-table-column  label="有无电梯" width="200">
+                                                    <template slot-scope="{ row }">
+                                                        <el-select v-model="row.has_elevator "   size="mini" clearable filterable  placeholder="有无电梯"  >
+                                                            <el-option label="有" value="1"></el-option>
+                                                            <el-option label="无" value="0"></el-option>
+                                                        </el-select>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column  label="楼层" width="200">
+                                                    <template slot-scope="{ row }">
+                                                        <el-select v-model="row.floor"   size="mini"  clearable filterable multiple placeholder="请选择楼层"  >
+                                                            <el-option  v-for="item in floor_options" :label="item.label" :value="item.value"></el-option>
+                                                        </el-select>
+                                                    </template>
+                                                </el-table-column>
+                                                <!--  1、按件结算 -->
+                                                <div v-if="form.banlou_fee.settle_type_child== 3">
+                                                    <el-table-column  label="是否锯板" width="200">
+                                                        <template slot-scope="{ row }">
+                                                            <el-select v-model="row.is_cut "   size="mini" clearable filterable  placeholder="是否锯板"  >
+                                                                <el-option label="是" value="1"></el-option>
+                                                                <el-option label="否" value="0"></el-option>
+                                                            </el-select>
+                                                        </template>
+                                                    </el-table-column>
+                                                </div>
+                                                <!--  2、按箱结算 -->
+                                                <el-table-column   :label="form.banlou_fee.settle_type_child == 3 ? '搬楼费(元/件)': '搬楼费(元/箱)'" width="220" >
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.unit_price" width="220" :min="0" :max="99999999" :step="10" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column   width="100">
+                                                    <template slot-scope="scope">
+                                                        <el-button icon="el-icon-minus" circle @click="()=> { form.banlou_fee.child_data.splice(scope.$index, 1)  } "></el-button>
+                                                    </template>
+                                                </el-table-column>
+
+                                            </el-table>
+                                            <el-row class="text-c pt-10 mb-10">
+                                                <el-button @click="add_banlou_fee()" icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                            </el-row>
+                                        </el-card>
+                                    </el-form-item>
+                                </el-row>
+                                <!--搬楼费配置 e-->
+
+                                <!--托运费配置 s-->
+                                <el-row type="flex" v-if="form.settle_type_ids.includes('3')">
+                                    <el-form-item label="托运费" required>
+                                        <el-select v-model="form.consign_fee.settle_type_child" class="label-right" size="mini" clearable filterable  placeholder="请选择托运费规则"  >
+                                            <el-option
+                                                    v-for="item in consignment_cost_options"
+                                                    :key="item.value"
+                                                    :label="item.label"
+                                                    :value="item.value">
+                                            </el-option>
+                                        </el-select>
+                                        <el-card class="mt-20" v-if="form.consign_fee.settle_type_child" >
+                                            <el-table
+                                                    ref="table"
+                                                    size="mini"
+                                                    style="width: 100%"
+                                                    :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                                                    :data="form.consign_fee.child_data"
+                                                    max-height="600px">
+                                                <el-table-column label="序号" fixed  type="index" width="60"></el-table-column>
+                                                <el-table-column   label="距离下限（包含）/米" width="200">
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.distance_lower " width="220" :min="0" :max="99999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column  label="距离上限（不包含）/米" width="220" >
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.distance_upper" width="220" :min="0" :max="99999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column   label="托运费（元/件）" width="220" >
+                                                    <template slot-scope="{ row }">
+                                                        <el-input-number v-model="row.unit_price" width="220" :min="0" :max="99999999" :step="10" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                                    </template>
+                                                </el-table-column>
+                                                <el-table-column   width="100">
+                                                    <template slot-scope="scope">
+                                                        <el-button  icon="el-icon-minus" circle @click="()=> { form.consign_fee.child_data.splice(scope.$index, 1)  } "></el-button>
+                                                    </template>
+                                                </el-table-column>
+                                            </el-table>
+                                            <el-row class="text-c pt-10 mb-10">
+                                                <el-button @click="add_consign_fee()"  icon="el-icon-circle-plus-outline" type="primary">添加一行</el-button>
+                                            </el-row>
+                                        </el-card>
+                                    </el-form-item>
+                                </el-row>
+                                <!--托运费配置 e-->
+                                <!--吨位费 s -->
+                                <el-row v-if="form.settle_type_ids.includes('4')">
+                                    <el-form-item label="吨位费" required>
+                                        <el-select v-model="form.tonnage_fee.settle_type_child" class="label-right" size="mini" clearable filterable  placeholder="请选择吨位费规则"  >
+                                            <el-option
+                                                    v-for="item in tonnage_cost_options"
+                                                    :key="item.value"
+                                                    :label="item.label"
+                                                    :value="item.value">
+                                            </el-option>
+                                        </el-select>
+                                        <el-row type="flex" class="mt-20" v-if="form.tonnage_fee.settle_type_child" align="middle">
+                                            每吨货物（元/单） <el-input-number v-model="form.tonnage_fee.unit_price" width="220" :min="0" :max="99999" :step="1" :precision="2" controls-position="right" placeholder="不可为空"></el-input-number>
+                                        </el-row>
+                                    </el-form-item>
+                                </el-row>
+                                <!--吨位费 e -->
+                                <el-form-item >
+                                    <el-button type="primary"  @click="() => { current_step-- }" size="small">返回上一步  </el-button>
+                                    <el-button type="primary"  @click="submit" size="small">保存 ({{current_step}}/{{count_step}}) </el-button>
+                                </el-form-item>
+                            </el-row>
+                        </transition>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </el-main>
+    </el-container>
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            const check_data = (rule, value, callback) => {
+                if (!value || value.length < 1) {
+                    callback(new Error('请选择日期'))
+                }
+            }
+            return {
+                back_url: './driver_salary_online.php?act=delivery_sal_conf_list',
+                loading: false,
+                city_list: [],
+                settle_type_list: [],
+                order_type_list: [],
+                driver_tag_list: [],
+                enable_list: [],
+                warehouse_list: [], // 仓库列表
+                warehouse: [], // 仓库id 库房id
+                districts: [], // 区域列表
+                source: 2,
+                //配送费
+                moving_cost_options: [
+                    { label: '按区域结算', value: '1'},
+                    { label: '按单量结算', value: '2'}
+                ],
+                // 搬楼费
+                banlou_fee_options: [
+                    { label: '按件结算', value: '3'},
+                    { label: '按箱结算', value: '4'}
+                ],
+                // 托运费
+                consignment_cost_options: [
+                    { label: '按距离结算', value: '5'}
+                ],
+                // 吨位费
+                tonnage_cost_options: [
+                    { label: '按吨结算', value: '6' }
+                ],
+                floor_options: [
+                    { label: '全部', value: '0'},
+                    { label: '1楼', value: '1'},
+                    { label: '2楼', value: '2'},
+                    { label: '3楼', value: '3'},
+                    { label: '4楼', value: '4'},
+                    { label: '5楼', value: '5'},
+                    { label: '6楼', value: '6'},
+                    { label: '7楼', value: '7'}
+                ],
+                current_step: 1,
+                count_step: 2,
+                form: {
+                    is_enable: '1',
+                    driver_tag: '',
+                    order_type_ids: [],
+                    settle_type_ids: [],
+                    shipping_fee: { child_data: []},
+                    banlou_fee: {},
+                    consign_fee: {},
+                    tonnage_fee : {}
+                }, // 添加配置数据对象
+                rules: {
+                    city: [
+                        { required: true, trigger: 'change', message: '请选择城市' }
+                    ],
+                    warehouse: [
+                        { type: 'array', required: true, message: '请选择仓库库房', trigger: 'change'},
+                    ],
+                    order_type_ids: [
+                        { type: 'array', required: true, message: '至少选择一个订单类型', trigger: 'change'},
+                    ],
+                    date: [
+                        { type: 'array', required: true, message: '请选择日期', trigger: 'change'},
+                    ],
+                    driver_tag: [
+                        { required: true, message: '请选择配送员标签', trigger: 'change' }
+                    ],
+                    settle_type_ids: [
+                        { type: 'array', required: true, message: '至少选择一个结算费用类型', trigger: 'change'},
+                    ],
+                    'shipping_fee.settle_type_child': [
+                        { type: 'array', required: true, message: '请选择配送费结算方式', trigger: 'change'},
+                    ],
+                }
+            }
+        },
+        watch: {
+            'form.shipping_fee.child_data': {
+                handler(newV, oldV) {
+                    if(this.form.shipping_fee.settle_type_child == 1) {
+                        if(newV) {
+                            let disable_ids = []
+                            //1.todo 获取所有已经选择的ids
+                            for (const item of newV) {
+                                disable_ids = disable_ids.concat(item.district_ids)
+                            }
+                            for (const district of this.districts) {
+                                if (disable_ids.includes(district.district_id)) {
+                                    district.disabled = true
+                                } else {
+                                    district.disabled = false
+                                }
+                            }
+                        }
+                    }
+                },
+                immediate: true,
+                deep:true,
+            }
+        },
+        created() {
+            const  query = this.parseQuery()
+            if(query['ds_id']) {
+                this.form.ds_id = query['ds_id']
+            }
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({  source: _that.source })
+                _that.city_list = data.city_list
+                _that.order_type_list = data.order_type_list
+                _that.driver_tag_list = data.driver_tag_list
+                _that.enable_list = data.enable_list
+                _that.settle_type_list = data.settle_type_list
+                if (this.form.ds_id) {
+                    _that.get_details()
+                }
+            },
+            get_details() {
+                const _that = this;
+                _that.loading = true
+                get_driver_config_detail({ ds_id: _that.form.ds_id }).then(res =>{
+                    _that.form = res.data
+                    _that.form.shipping_fee = res.data.shipping_fee || {}
+                    _that.form.banlou_fee = res.data.banlou_fee || {}
+                    _that.form.consign_fee = res.data.consign_fee || {}
+                    _that.form.tonnage_fee = res.data.tonnage_fee || {}
+                    if(res.data.tonnage_fee.child_data) {
+                        _that.form.tonnage_fee.unit_price = res.data.tonnage_fee.child_data[0].unit_price
+                    }
+                    _that.form.warehouse = []
+                    _that.form.warehouse.push(_that.form.house_id)
+                    _that.form.warehouse.push( _that.form.store_id)
+                    _that.form.date = [_that.form.expire_date_start, _that.form.expire_date_end]
+
+                    _that.change_city(_that.form.city)
+                }).catch(_ =>{
+                    _that.loading = false
+                })
+            },
+            change_city(city) {
+                _that.warehouse_list = []
+                if(city) {
+                    get_warehouse({ city: city, source: _that.source }).then(res => {
+                        _that.warehouse_list = res.data || []
+                        _that.loading = false
+                    })
+                } else {
+                    _that.form.warehouse = undefined
+                }
+            },
+            get_districts() {
+                $get({city: _that.form.city}, get_city_districts ).then(res => {
+                    _that.districts = res.data || []
+                }).catch(_ => {
+
+                })
+            },
+            next_step() {
+                _that.get_districts()
+                this.$refs.form.validate(valid => {
+                    if(valid) {
+                        _that.current_step ++
+                    }
+                })
+            },
+            submit() {
+                this.$refs.form.validate(valid => {
+                    if(valid) {
+                        const settle_type_ids = _that.form.settle_type_ids
+                        //todo 1、检查配送费
+                        if(settle_type_ids.includes('1')) {
+                            const settle_type_child = _that.form.shipping_fee.settle_type_child
+                            const child_data = _that.form.shipping_fee.child_data
+                            if(settle_type_child == 1) {
+                                if(!child_data || child_data.length <1) {
+                                    return _that.$message({ type: 'warning' , message: '请添加配送费结算配置'})
+                                }
+                                if(!_that.check_shipping_fee_by_district() ) { return }
+                            } else if(settle_type_child == 2){
+                                if(!child_data || child_data.length <1) {
+                                    return _that.$message({ type: 'warning' , message: '请添加配送费结算配置'})
+                                }
+                                if(!_that.check_shipping_fee_all()) { return }
+                            } else {
+                                return _that.$message({ type: 'warning' , message: '请选择配送费结算方式'})
+                            }
+                        } else {
+                            // 防止返回上一步重新编辑 清楚老数据 需要带着 child_data 监听用到
+                            _that.form.shipping_fee = { child_data: []}
+                        }
+                        //todo 2、检查搬楼费
+                        if(settle_type_ids.includes('2') ) {
+                            const settle_type_child = _that.form.banlou_fee.settle_type_child
+                            const child_data = _that.form.banlou_fee.child_data
+                            if(settle_type_child){
+                                if(!child_data || child_data.length <1) {
+                                    return _that.$message({ type: 'warning' , message: '请添加搬楼费结算配置'})
+                                }
+                                if(!_that.check_banlou_fee_all()) { return }
+                            } else {
+                                return _that.$message({ type: 'warning' , message: '请选择搬楼费结算方式'})
+                            }
+                        } else {
+                            _that.form.banlou_fee = {}
+                        }
+                        //todo 3、检查托运费
+                        if(settle_type_ids.includes('3')) {
+                            const settle_type_child = _that.form.consign_fee.settle_type_child
+                            const child_data = _that.form.consign_fee.child_data
+                            if(settle_type_child){
+                                if(!child_data || child_data.length <1) {
+                                    return _that.$message({ type: 'warning' , message: '请添加托运费结算配置'})
+                                }
+                                if(!_that.check_consign_fee_all()) { return }
+                            } else {
+                                return _that.$message({ type: 'warning' , message: '请选择托运费结算方式'})
+                            }
+                        } else{
+                            _that.form.consign_fee = {}
+                        }
+                        //todo 4、检查吨位费
+                        if(settle_type_ids.includes('4')) {
+                            if(_that.form.tonnage_fee.settle_type_child){
+                                if(!_that.form.tonnage_fee.unit_price) {
+                                    return _that.$message({ type: 'warning' , message: '请填写吨位费'})
+                                }
+                            } else {
+                                return _that.$message({ type: 'warning' , message: '请选择吨位费结算方式'})
+                            }
+                        } else{
+                            _that.form.tonnage_fee = {}
+                        }
+                        const  form =  JSON.parse(JSON.stringify(_that.form))
+                        const params = form
+                        params.config_detail = {}
+                        params.config_detail.shipping_fee  = form.shipping_fee
+                        params.config_detail.banlou_fee  = form.banlou_fee
+                        params.config_detail.consign_fee  = form.consign_fee
+                        params.config_detail.tonnage_fee = {
+                            settle_type_child: form.tonnage_fee.settle_type_child,
+                            child_data: [{unit_price : form.tonnage_fee.unit_price}]
+                        }
+                        params.settle_type_ids = form.settle_type_ids.join(',')
+                        params.order_type_ids = form.order_type_ids.join(',')
+                        params.expire_date_start = form.date[0]
+                        params.expire_date_end = form.date[1]
+                        params.store_id = form.warehouse[1]
+                        delete params.warehouse
+                        delete params.date
+                        delete params.shipping_fee
+                        delete params.banlou_fee
+                        delete params.consign_fee
+                        delete params.tonnage_fee
+                        delete params.dr
+                        _that.loading = true
+                        $get(params, DriverConfigAdd).then(res => {
+                            _that.loading = false
+                            if(res.code == 200) {
+                                window.location.href = './driver_salary_online.php?act=delivery_sal_conf_list'
+                            }
+                        }).catch(_ => {
+                            _that.loading = false
+                        })
+                    } else{
+                        // 返回上一步补全信息
+                        _that.current_step --
+                    }
+                })
+            },
+            /*托运费添加时判断*/
+            add_consign_fee() {
+                const pass = _that.check_consign_fee_all()
+                if(pass) {
+                    _that.push_array(_that.form.consign_fee)
+                }
+            },
+            /*托运费 检查所有的*/
+            check_consign_fee_all() {
+                let list = _that.form.consign_fee.child_data;
+                let is_pass = true
+                let error_msg = ''
+                let msg =''
+                if(list && list.length> 0) {
+                    for (let i = 0; i < list.length; i++) {
+                        const item = list[i]
+                        const distance_lower = item.distance_lower
+                        const distance_upper = item.distance_upper
+                        const unit_price = item.unit_price
+                        // todo 1、判断添加属性是否正确  判断为一个的时候
+                        msg = '托运费 - 第'+(i+1)+'行'
+                        if(_that.empty(distance_lower)) { error_msg =''+msg+'距离下限不可为空~' }
+                        if(_that.empty(distance_upper) ) { error_msg = msg+'距离上限不可为空~' }
+                        if(_that.empty(unit_price)) { error_msg =''+msg+'托运费不可为空~' }
+                        if(distance_upper <= distance_lower ) {error_msg =''+msg+' 距离下限不能大于或等于上限~'}
+                        if(error_msg != '') {
+                            is_pass =  false;
+                            _that.$message({ type: 'warning', message: error_msg })
+                            break;
+                        }
+                        //todo 2、判断是佛如重叠
+                        let  floor_ids= []
+                        if(list.length> 1) {
+                            for(let j = 0; j < list.length; j++) {
+                                const _item = list[j]
+                                if(i!=j) {
+                                    const _distance_lower = _item.distance_lower
+                                    const _distance_upper = _item.distance_upper
+                                    const _unit_price = _item.unit_price
+                                    // todo 3、判断添加属性是否正确  判断除本身 和第一个 之外的时候
+                                    msg = '托运费 - 第'+(j+1)+'行'
+                                    if(_that.empty(_distance_lower)) { error_msg =''+msg+'距离下限不可为空~' }
+                                    if(_that.empty(_distance_upper)) { error_msg = msg+'距离上限不可为空~' }
+                                    if(_that.empty(_unit_price)) { error_msg =''+msg+'托运费不可为空~' }
+                                    if(_distance_upper <= _distance_lower ) {error_msg =''+msg+' 距离下限不能大于或等于上限~'}
+                                    if(error_msg != '') {
+                                        is_pass =  false;
+                                        break;
+                                    }
+                                    // todo 4、判断是否重叠
+                                    is_pass = _that.filter_limit(distance_lower,distance_upper, _distance_lower, _distance_upper)
+                                    if(!is_pass) {
+                                        error_msg = '距离上下限有重叠'
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(!is_pass) {
+                            _that.$message({ type: 'warning', message: error_msg })
+                            break;
+                        } else{
+                            // 排序
+                            list.sort(function(obj1, obj2) {
+                                let val1 = obj1.distance_upper
+                                let val2 = obj2.distance_upper
+                                return val1 - val2
+                            })
+                        }
+                    }
+                }
+                return is_pass
+            },
+            /*搬楼费添加时判断*/
+            add_banlou_fee() {
+                const pass = _that.check_banlou_fee_all()
+                if(pass) {
+                    _that.push_array(_that.form.banlou_fee)
+                }
+            },
+            /*搬楼费 检查所有的*/
+            check_banlou_fee_all() {
+                let list = _that.form.banlou_fee.child_data;
+                let is_pass = true
+                let error_msg = ''
+                let msg =''
+                if(list && list.length> 0) {
+                    for (let i = 0; i < list.length; i++) {
+                        const item = list[i]
+                        const has_elevator  = item.has_elevator
+                        const is_cut = item.is_cut
+                        const floor = item.floor
+                        const unit_price = item.unit_price
+                        // todo 2、判断添加属性是否正确  判断为一个的时候
+                        msg = '搬楼费 - 第'+(i+1)+'行'
+                        if(_that.empty(has_elevator)) { error_msg ='请选择'+msg+'是否有电梯~' }
+                        if(_that.empty(is_cut) && _that.form.banlou_fee.settle_type_child == 3) { error_msg ='请选择'+msg+'是否有剧板~' }
+                        if(_that.empty(floor)) { error_msg ='请选择'+msg+'楼层~' }
+                        if(_that.empty(unit_price)) { error_msg =''+msg+'搬楼费不可为空~' }
+                        if(error_msg != '') {
+                            is_pass =  false;
+                            _that.$message({ type: 'warning', message: error_msg })
+                            break;
+                        }
+                        //todo 3、判断是否已经有存在的配置
+                        let  floor_ids= []
+                        if(list.length> 1) {
+                            for(let j = 0; j < list.length; j++) {
+                                const _item = list[j]
+                                const _has_elevator  = _item.has_elevator
+                                const _is_cut  = _item.is_cut
+                                const _floor  = _item.floor
+                                const _unit_price  = _item.unit_price
+                                if(i!=j) {
+                                    msg = '第'+(j+1)+'行'
+                                    //todo 2、判断添加属性是否正确 主要判断非第一个
+                                    if(_that.empty(_has_elevator)) { error_msg ='请选择'+msg+'是否有电梯~' }
+                                    if(_that.empty(_is_cut)&& _that.form.banlou_fee.settle_type_child == 3) { error_msg ='请选择'+msg+'是否有剧板~' }
+                                    if(_that.empty(_floor)) { error_msg ='请选择'+msg+'楼层~' }
+                                    if(_that.empty(_unit_price)) { error_msg =''+msg+'搬楼费不可为空~' }
+                                    if(error_msg) {
+                                        is_pass =  false;
+                                        break;
+                                    }
+                                    floor_ids = _item.floor.filter((x)=>{
+                                        return floor.includes(x)
+                                    })
+                                    if(_that.form.banlou_fee.settle_type_child == 3) {
+                                        if(has_elevator == _has_elevator && is_cut == _is_cut && floor_ids.length > 0 ) {
+                                            is_pass =  false;
+                                            error_msg = floor_ids.length > 0 ? '当前' + floor_ids.join(',') +'楼配置重复' : '配置重复~'
+                                            break;
+                                        }
+                                    } else {
+                                        if(has_elevator == _has_elevator  && floor_ids.length > 0 ) {
+                                            is_pass =  false;
+                                            error_msg = floor_ids.length > 0 ? '当前' + floor_ids.join(',') +'楼配置重复' : '配置重复~'
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if(!is_pass) {
+                            _that.$message({ type: 'warning', message: error_msg })
+                            break;
+                        }
+                    }
+                }
+                return is_pass
+            },
+            /*配送费添加时判断*/
+            add_shopping_fee() {
+                let pass = false
+                if(_that.form.shipping_fee.settle_type_child == 1) {
+                    pass = _that.check_shipping_fee_by_district()
+                } else {
+                    pass = _that.check_shipping_fee_all()
+                }
+                if(pass) {
+                    _that.push_array(this.form.shipping_fee)
+                }
+            },
+            /*配送费-区域检查所有的*/
+            check_shipping_fee_by_district() {
+                let list = _that.form.shipping_fee.child_data;
+                let is_pass = true;
+                if(list && list.length> 0) {
+                    let error_msg = ''
+                    let msg =''
+                    for (let i = 0; i < list.length; i++ ) {
+                        const item = list[i]
+                        msg = '配送费 - 第'+(i+1)+'行'
+                        if(!item.district_ids || item.district_ids.length < 1) {
+                            is_pass = false
+                            error_msg = '请选择'+ msg +'区域~'
+                        } else if (_that.empty(item.unit_price)){
+                            error_msg = msg + ' 配送费不可为空~'
+                            is_pass = false
+                        }
+                    }
+                    if(!is_pass) {
+                        _that.$message({ type: 'warning', message: error_msg })
+                    }
+                }
+                return is_pass
+            },
+
+            /*配送费--单量检查所有的*/
+            check_shipping_fee_all() {
+                let list = _that.form.shipping_fee.child_data;
+                let is_pass = true;
+                let error_msg = ''
+                let msg =''
+                if(list && list.length> 0) {
+                    for (let i = 0; i < list.length; i++ ) {
+                        const item = list[i]
+                        const lower = item.order_num_lower
+                        const upper = item.order_num_upper
+                        const unit_price = item.unit_price
+                        msg = '配送费 - 第'+(i+1)+'行'
+                        //todo 2、判断添加树形是否正确
+                        if(_that.empty(upper)) { error_msg = msg + ' 单量上限不可为空~' }
+                        if(_that.empty(lower)) { error_msg = msg + ' 单量下限不可为空~'}
+                        if(_that.empty(unit_price)) { error_msg = msg + ' 配送费不可为空~' }
+                        //大小判断
+                        if(upper <= lower ) { error_msg = msg + ' 单量下限不能大于或等于上限~' }
+                        if(error_msg != '') {
+                            is_pass =  false;
+                            break;
+                        }
+                        //todo 2、判断上限是否重叠
+                        if(list.length> 1) {
+                            for(let j = 0; j < list.length; j++) {
+                                const  _item = list[j]
+                                _item.no_pass = false
+                                if(i!=j) {
+                                    const new_lower = _item.order_num_lower
+                                    const new_upper = _item.order_num_upper
+                                    const new_unit_price = _item.unit_price
+                                    msg = '配送费 - 第'+(j+1)+'行'
+                                    //todo 2、判断添加树形是否正确
+                                    if(_that.empty(new_lower)) { error_msg = msg + ' 单量下限不可为空~' }
+                                    if(_that.empty(new_upper)) { error_msg = msg + ' 单量上限不可为空~'}
+                                    if(_that.empty(new_unit_price)) { error_msg = msg + ' 配送费不可为空~' }
+                                    //大小判断
+                                    if(new_upper <= new_lower ) { error_msg = msg + ' 单量下限不能大于等于上限~' }
+                                    if(error_msg != '') {
+                                        is_pass =  false;
+                                        break;
+                                    }
+                                    // 此处加入图标提示 先暂时不去掉
+                                    _item.no_pass = true
+                                    is_pass = _that.filter_limit(lower,upper, new_lower, new_upper)
+                                    if(!is_pass) {
+                                        error_msg = '单量上下限有重叠~'
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(!is_pass) {
+                            // 此处加入图标提示 先暂时不去掉
+                            item.no_pass = true
+                            _that.$message({ type: 'warning', message: error_msg })
+                            break;
+                        } else {
+                            // 排序
+                            list.sort(function(obj1, obj2) {
+                                let val1 = obj1.order_num_upper
+                                let val2 = obj2.order_num_upper
+                                return val1 - val2
+                            })
+                        }
+                    }
+                }
+                return is_pass
+            },
+            /* 配送费添加一行时当前行是否有问题 */
+            check_shipping_fee_one(object, scope) {
+                const list = object.child_data
+                if(list) {
+                    let row = scope.row
+                    const order_num_upper = row.order_num_upper
+                    const order_num_lower = row.order_num_lower
+                    const unit_price = row.unit_price
+                    //不为空
+                    if(_that.empty(order_num_upper)) {
+                        _that.$message({ type: 'warning', message: '上限不可为空~' })
+                        return false;
+                    }
+                    if(_that.empty(order_num_upper)) {
+                        _that.$message({ type: 'warning', message: '下限不可为空~'})
+                        return false;
+                    }
+                    //大小判断
+                    if(order_num_upper <= order_num_lower ) {
+                        _that.$message({ type: 'warning', message: '上限不可大于下限~' })
+                        return false;
+                    }
+                    if(_that.empty(unit_price)) {
+                        _that.$message({ type: 'warning', message: '配送费不可为空~'})
+                        return false;
+                    }
+                    if(list.length > 1) {
+                        let is_pass = true
+                        // 遍历 非当前项的数据进行判断
+                        for (let i in list) {
+                            const  item = list[i]
+                            item.no_pass = false
+                            if( i != scope.$index) {
+                                is_pass = _that.filter_limit(item.order_num_lower, item.order_num_upper, order_num_lower, order_num_upper)
+                                if(!is_pass) {
+                                    break;
+                                }
+                            }
+                        }
+                        if(!is_pass) {
+                            // 此处加入图标提示 先暂时不去掉
+                            _that.$set(row, 'no_pass', true)
+                            _that.$message({ type: 'warning', message: '上下限有重叠~' })
+                            return false
+                        }
+                        list.sort(function(obj1, obj2) {
+                            let val1 = obj1.order_num_upper
+                            let val2 = obj2.order_num_upper
+                            return val1 - val2
+                        })
+                        return true
+                    }
+                }
+            },
+            push_array(object) {
+                if(object.child_data) {
+                    object.child_data.push({})
+                } else {
+                    this.$set(object, 'child_data',[{}] )
+                }
+            },
+            /**
+             * 判断上下限
+             * @param down 下限
+             * @param up 上限
+             * @returns {boolean}
+             */
+            filter_limit(lower, upper, new_lower, new_upper ) {
+                // todo 1、新添加 上下限 都包含在内 此规则在添加的上限大于下限基础上面
+                if(lower <= new_lower && new_upper <= upper) {
+                    return false;
+                }
+                // todo 2、下限包含
+                if(lower <= new_lower && new_lower < upper) {
+                    return false;
+                }
+                // todo 3、上线包含
+                if(lower < new_upper && new_upper <= upper) {
+                    return false;
+                }
+                // todo 4、新添加 下限小于当前下限 上限大于当前上限
+                if(new_lower <= lower  && new_upper >= upper) {
+                    return false;
+                }
+                return true
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less" >
+    .warning_icon{
+        font-size: 20px;
+        vertical-align: middle;
+    }
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+
+    .el-card__body{
+        padding: 0px;
+    }
+    .el-card.is-always-shadow {
+        box-shadow: 0 2px 2px 0 rgba(0,0,0,.1) !important;
+    }
+</style>

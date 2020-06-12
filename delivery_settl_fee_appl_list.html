@@ -1,0 +1,355 @@
+{include file="header.htm"}
+<!-- 司机结算费用申请 -->
+<div id="app">
+    <el-container>
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 司机结算费用申请列表</span>
+            <el-link :href="add_href" :underline="false" class="header_link">添加配置</el-link>
+        </el-header>
+        <el-main class="main">
+            <!-- 头部过滤项 -->
+            <el-row class="filter-container">
+                <span class="filter-label">城市</span>
+                <el-select v-model="listQuery.city" class="filter-item" size="mini" @change="change_city"  clearable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">仓库库房</span>
+                <el-cascader :options="warehouse_list" v-model="warehouse" :props="{label:'store_name',value:'store_id'}" class="filter-item"  style="min-width: 240px" size="mini" clearable placeholder="需先选择城市"></el-cascader>
+                <span class="filter-label">订单号</span>
+                <el-input size="mini" v-model="listQuery.order_sn" class="filter-item filter-item-w"  clearable placeholder="请输入类别关键词"></el-input>
+                <span class="filter-label">发货单号</span>
+                <el-input size="mini"v-model="listQuery.delivery_sn" class="filter-item filter-item-w"  clearable placeholder="请输入类别关键词"></el-input>
+                <span class="filter-label">配送员</span>
+                <el-select v-model="listQuery.driver_id" class="filter-item" size="mini" @change="change_city"  filterable clearable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in driver_list"
+                            :key="item.driver_id"
+                            :label="item.driver_name"
+                            :value="item.driver_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">费用类型</span>
+                <el-select v-model="listQuery.fee_type" class="filter-item" size="mini" clearable placeholder="请选择费用类型">
+                    <el-option
+                            v-for="item in settle_fee_type"
+                            :key="item.fee_type"
+                            :label="item.type_name"
+                            :value="item.fee_type">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">状态</span>
+                <el-select v-model="listQuery.is_enable" class="filter-item" size="mini"  placeholder="请选择操作状态">
+                    <el-option
+                            v-for="item in enable_list"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">时间类型</span>
+                <el-select v-model="listQuery.time_type" class="filter-item" size="mini"  placeholder="请选择操作类型">
+                    <el-option label="申请时间" :value="1"></el-option>
+                    <el-option label="审核时间" :value="2"></el-option>
+                </el-select>
+                <el-date-picker
+                        v-model="listQuery.date_start"
+                        align="right"
+                        class="filter-item"
+                        size="mini"
+                        type="date"
+                        format ='yyyy-MM-dd'
+                        value-format ='yyyy-MM-dd'
+                        placeholder="开始时间"
+                        :picker-options="pickerOptions">
+                </el-date-picker>
+                <el-date-picker
+                        v-model="listQuery.date_end"
+                        align="right"
+                        type="date"
+                        format ='yyyy-MM-dd'
+                        value-format ='yyyy-MM-dd'
+                        class="filter-item"
+                        size="mini"
+                        placeholder="结束时间"
+                        :picker-options="pickerOptions">
+                </el-date-picker>
+
+                <el-button class="filter-btn" size="mini" type="primary" icon="el-icon-search" @click="search_list">搜索</el-button>
+                <el-button class="filter-btn" size="mini" icon="el-icon-refresh-left" @click="reset">重置</el-button>
+                <el-button  class="filter-btn" size="mini" type="primary" @click="export_excel" icon="el-icon-download">导出列表</el-button>
+                <el-button class="filter-btn" size="mini" type="primary" :disabled=" rec_ids.length == 0" @click="show_approval = true">批量审核 {{ rec_ids.length > 0 ? '（'+rec_ids.length+'）' : ''}}</el-button>
+            </el-row>
+            <el-row class="pt-20" type="flex">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="list"
+                        @selection-change="handleSelectionChange"
+                        fit
+                        max-height="860px"
+                        v-loading ='loading'
+                        highlight-current-row>
+                    <el-table-column type="selection" width="55" :selectable="(row) => { return row.status == 0 }"></el-table-column>
+                    <el-table-column label="编号" property="rec_id"></el-table-column>
+                    <el-table-column property="region_name" label="城市"></el-table-column>
+                    <el-table-column property="store_name" label="仓库库房"></el-table-column>
+                    <el-table-column property="order_sn" label="订单号" ></el-table-column>
+                    <el-table-column property="delivery_sn" label="发货单号"  ></el-table-column>
+                    <el-table-column property="driver_name" label="配送员"></el-table-column>
+                    <el-table-column property="fee_type_name" label="费用类型" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="apply_reason" label="申请原因" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="final_money" label="最终费用（元）"></el-table-column>
+                    <el-table-column property="remark" label="备注说明" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="status_name" label="状态"></el-table-column>
+                    <el-table-column property="apply_user_name" label="申请人"></el-table-column>
+                    <el-table-column property="apply_time" label="申请时间"></el-table-column>
+                    <el-table-column property="check_user_name" label="审核人"></el-table-column>
+                    <el-table-column property="check_time" label="审核时间"></el-table-column>
+                    <el-table-column property="check_reason" label="审核原因" show-overflow-tooltip></el-table-column>
+                </el-table>
+            </el-row>
+        </el-main>
+    </el-container>
+    <el-row class="pt-20 fr">
+        <el-pagination
+                :current-page.sync="listQuery.page"
+                :page-size.sync="listQuery.size"
+                :layout="layout"
+                :page-sizes="pageSizes"
+                :total="listQuery.total"
+                v-bind="$attrs"
+                @size-change="search_list"
+                @current-change="search_list"
+        />
+    </el-row>
+    <el-dialog title="司机结算费用申请-批量审核" width="40%" :visible.sync="show_approval">
+        <el-row>
+            <el-col :span="20">
+                <el-form :model="form" :rules="rules"   label-width="100px" class="pl-20" size="mini">
+                    <el-form-item label="申请原因" required>
+                        <el-input type="textarea" :rows="4"  show-word-limit maxlength="300"  v-model="form.check_reason" autocomplete="off"></el-input>
+                    </el-form-item>
+                    <el-form-item label="是否通过">
+                        <el-radio-group v-model="form.status"   size="mini">
+                            <el-radio :label="1"  style="height: 28px;line-height: 28px;" >通过</el-radio>
+                            <el-radio :label="2"  style="height: 28px;line-height: 28px;" >不通过</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                </el-form>
+            </el-col>
+        </el-row>
+        <div slot="footer">
+            <el-button   @click="show_approval = false">取 消</el-button>
+            <el-button type="primary" @click="approval_pass">保 存</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="司机结算费用-添加" width="40%" :visible.sync="show_add_set">
+        <el-form :model="form" :rules="rules"   label-width="100px" class="pl-20" size="mini">
+            <el-form-item label="城市" required prop="username" >
+                <el-select v-model="form.city" class="label-right" clearable filterable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="仓库库房" required prop="warehouse">
+                <el-cascader :options="warehouse_list" v-model="warehouse" :props="{label:'store_name',value:'store_id'}" class="filter-item"  style="min-width: 240px" size="mini" clearable placeholder="需先选择城市"></el-cascader>
+            </el-form-item>
+            <el-form-item label="费用类型">
+                <el-select v-model="form.fee_type" class="label-right" size="mini" clearable filterable multiple placeholder="请选择费用类型"  >
+                    <el-option
+                            v-for="item in settle_fee_type"
+                            :key="item.fee_type"
+                            :label="item.type_name"
+                            :value="item.fee_type">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="申请原因" required>
+                <el-input type="textarea" :rows="4"  show-word-limit maxlength="300" v-model="form.reason_id" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="启用状态">
+                <el-switch
+                        style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                        v-model="form.seller_id"
+                        active-color="#67C23A"
+                        inactive-color="#dcdfe6"
+                        active-text="启用"
+                        inactive-text="禁用">
+                </el-switch>
+            </el-form-item>
+        </el-form>
+        <div slot="footer">
+            <el-button   @click="show_add_set = false">取 消</el-button>
+            <el-button type="primary" @click="show_add_set = false">保 存</el-button>
+        </div>
+    </el-dialog>
+</div>
+<script>
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                show_add_set: false,
+                show_approval: false,
+                add_href: './driver_salary_online.php?act=delivery_settl_fee_appl_add',
+                loading: false,
+                city_list: [],
+                source: 6,
+                settle_fee_type: [],
+                driver_list: [],
+                enable_list : [],
+                warehouse_list: [], // 仓库列表
+                warehouse: [], // 仓库id 库房id
+                listQuery: {
+                    size: 10,
+                    page: 1,
+                    total: 0
+                },
+                form: {
+                    status: 1
+                },
+                rules: [],
+                list: [],
+                rec_ids:[],
+            }
+        },
+        watch: {
+            'warehouse': {
+                handler(newV, oldV) {
+                    if(newV) {
+                        _that.listQuery.store_id = newV[0] || ''
+                        _that.listQuery.house_id = newV[1] || ''
+                    }else {
+                        _that.listQuery.store_id = ''
+                        _that.listQuery.house_id = ''
+                    }
+                }
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const  { data } = await get_init_filter_data({ source: this.source })
+                _that.city_list = data.city_list
+                _that.settle_fee_type = data.settle_fee_type || []
+                _that.driver_list = data.driver_list || []
+                _that.enable_list  = data.enable_list  || []
+                _that.get_list()
+            },
+            get_list() {
+                _that.loading = true
+                getDriverSettlementFeeApplicationList(_that.listQuery).then(res => {
+                    _that.list = res.data.data_list || []
+                    _that.listQuery.total = res.data.data_total
+                    _that.loading = false
+                }).catch(_ =>{
+                    _that.loading = false
+                })
+            },
+            change_city(city) {
+                _that.warehouse_list = []
+                if(city) {
+                    get_warehouse({city: city, source: _that.source }).then(res => {
+                        _that.warehouse_list = res.data || []
+                    })
+                }
+            },
+            search_list() {
+                _that.page = 1
+                _that.get_list()
+            },
+            search_delivery_list() {
+
+            },
+            export_excel() {
+
+            },
+            handleSelectionChange(rows) {
+                _that.rec_ids= []
+                rows.some(item => {
+                    _that.rec_ids.push(item.rec_id)
+                })
+            },
+            approval_pass() {
+                // check_reason status
+                if(_that.rec_ids.length > 0) {
+                    if(!_that.form.check_reason) { return _that.$message({ type: 'warning', message: '申请原因不可为空'}) }
+                    if(!_that.form.status) { return _that.$message({ type: 'warning', message: '请选择是否通过'}) }
+                    _that.loading = true
+                    _that.form.rec_ids = _that.rec_ids.join(',')
+                    DriverSettlementFeeApplicationBatchCheck(_that.form).then(res => {
+                        if(res.code == 200) {
+                            _that.show_approval = false
+                            _that.get_list()
+                        }
+                        _that.loading = false
+                    }).catch(_=>{
+                        _that.loading = false
+                    })
+                } else {
+                    return _that.$message({ type: 'warning', message: '请先选择审核项'})
+                }
+
+            },
+            reset() {
+                _that.listQuery = {
+                    size: 20,
+                    page: 1
+                }
+                _that.get_list()
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less">
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+</style>

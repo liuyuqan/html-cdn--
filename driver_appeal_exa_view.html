@@ -1,0 +1,321 @@
+{include file="header.htm"}
+<!--司机申诉审核详情-->
+<div id="app">
+    <el-header class="header">
+        <span class="header_title">小胖熊</span> <span> - 司机申诉审核详情</span>
+        <el-link href="javascript:history.back(-1)" :underline="false" class="header_link">返回列表</el-link>
+    </el-header>
+    <div  class="mr-20 ml-20 mb-40" v-loading="loading">
+        <!-- 基本信息 -->
+        <el-card class="mt-20">
+            <div slot="header">
+                <span class="second-title">基本信息</span>
+            </div>
+            <el-form ref="form"  :model="form"  label-width="120px" class="pl-20" size="mini">
+                <el-row v-if="form.base_info">
+                    <el-col :offset="4" :span="8">
+                        <el-form-item label="订单编号："><span class="label-content">{{form.base_info.order_sn}}</span></el-form-item>
+                        <el-form-item label="发货单号："><span class="label-content">{{form.base_info.delivery_sn}}</span></el-form-item>
+                        <el-form-item label="反馈标签："><span class="label-content">{{form.base_info.label_name}}</span></el-form-item>
+                        <el-form-item label="反馈内容："><span class="label-content">{{form.base_info.feedback_content}}</span></el-form-item>
+                        <el-form-item label="提交时间："><span class="label-content">{{form.base_info.add_time}}</span></el-form-item>
+                    </el-col>
+                    <el-col :span="10">
+                        <el-form-item label="订单类型："><span class="label-content">{{form.base_info.order_type_name}}</span></el-form-item>
+                        <el-form-item label="配送员："><span class="label-content">{{form.base_info.driver_name}}</span></el-form-item>
+                        <el-form-item label="二级选项：">
+                            <span class="label-content">{{form.base_info.second_type_name}}</span>
+                            <el-popover
+                                    v-if="form.base_info.status == 1"
+                                    @show="set_default_data"
+                                    placement="right"
+                                    width="300"
+                                    v-model="edit_second_type_show">
+                                <el-row><span class="header_title">编辑二级选项</span></el-row>
+                                <el-form ref="form"  :model="form"  class="pl-20 mt-20" size="mini">
+                                    <el-row v-if="form.base_info.second_type == 1">
+                                        <el-form-item label="长">
+                                            <el-input-number v-model="second_type_form.elevator_length"  :precision="2" :step="0.5"  controls-position="right" size="mini" :max="20"></el-input-number>
+                                        </el-form-item>
+                                        <el-form-item label="宽">
+                                            <el-input-number v-model="second_type_form.elevator_width"  :precision="2" :step="0.5"  controls-position="right" size="mini" :max="20"></el-input-number>
+                                        </el-form-item>
+                                        <el-form-item label="高">
+                                            <el-input-number v-model="second_type_form.elevator_high"  :precision="2" :step="0.5"  controls-position="right" size="mini" :max="20"></el-input-number>
+                                        </el-form-item>
+                                    </el-row>
+                                    <el-row v-else-if="form.base_info.second_type == 2">
+                                        <el-form-item label="托运距离">
+                                            <el-input-number v-model="second_type_form.consign_distance"  :precision="2" :step="0.5"  controls-position="right" size="mini" :max="20"></el-input-number>
+                                        </el-form-item>
+                                    </el-row>
+                                    <el-row v-else-if="form.base_info.second_type == 3">
+                                        <el-form-item label="楼梯数" >
+                                            <el-input-number v-model="second_type_form.stairs_num"  :precision="2" :step="0.5"  controls-position="right" size="mini" :max="20"></el-input-number>
+                                        </el-form-item>
+                                    </el-row>
+                                </el-form>
+                                <div style="text-align: right; margin: 0">
+                                    <el-button size="mini" type="text" @click="edit_second_type_show = false">取消</el-button>
+                                    <el-button type="primary" size="mini" @click="submit_second_type">确定</el-button>
+                                </div>
+                                <el-link slot="reference"  type="primary" :underline="false"  >编辑</el-link>
+                            </el-popover>
+
+                        </el-form-item>
+                        <el-form-item label="审核状态："><span class="label-content">{{form.base_info.status_name}}</span></el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+        </el-card>
+        <!--收货信息-->
+        <el-card class="mt-20">
+            <div slot="header">
+                <span class="second-title">收货信息</span>
+            </div>
+            <el-form ref="form"  :model="form"  label-width="120px" class="pl-20" size="mini">
+                <el-row v-if="form.consign_info">
+                    <el-col :offset="4" :span="8">
+                        <el-form-item label="收货人："><span class="label-content">{{form.consign_info.consignee}}</span></el-form-item>
+                        <el-form-item label="城市：" ><span class="label-content">{{form.consign_info.city_name}}</span></el-form-item>
+                        <el-form-item label="收货地址："><span class="label-content">{{form.consign_info.address}}</span></el-form-item>
+                        <el-form-item label="有无电梯："><span class="label-content">{{form.consign_info.elevator_name}}</span></el-form-item>
+                        <el-form-item label="托运距离："><span class="label-content">{{form.consign_info.consign_distance}}</span></el-form-item>
+                        <el-form-item label="到货时间："><span class="label-content">{{form.consign_info.transit_time}}</span></el-form-item>
+                    </el-col>
+                    <el-col :span="10">
+                        <el-form-item label="区："><span class="label-content">{{form.consign_info.district_name}}</span></el-form-item>
+                        <el-form-item label="联系方式："><span class="label-content">{{form.consign_info.tel}}</span></el-form-item>
+                        <el-form-item label="车可开到楼下："><span class="label-content">{{form.consign_info.downstairs_name}}</span></el-form-item>
+                        <el-form-item label="送货时间："><span class="label-content">{{form.consign_info.shipping_time_name}}</span></el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+        </el-card>
+        <!--商品信息-->
+        <el-card class="mt-20">
+            <div slot="header">
+                <span class="second-title">商品信息</span>
+            </div>
+            <el-row type="flex" v-if="form.goods_list">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="form.goods_list"
+                        fit
+                        size="mini"
+                        max-height="460px"
+                        highlight-current-row>
+                    <el-table-column label="序号" type="index"></el-table-column>
+                    <el-table-column property="goods_name" label="商品名称"></el-table-column>
+                    <el-table-column property="goods_sn" label="商品货号" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="goods_attr" label="商品属性" ></el-table-column>
+                    <el-table-column property="goods_number" label="数量" ></el-table-column>
+                </el-table>
+            </el-row>
+        </el-card>
+        <!--图片视频-->
+        <el-card class="mt-20">
+            <div slot="header" >
+                <span class="second-title">图片/视频</span>
+                <el-button style="float: right; padding: 3px 0" type="text" @click="show_image_video = !show_image_video">
+                    <span v-if="show_image_video">收起详情<i class="el-icon-arrow-down el-icon--right"></i></span>
+                    <span v-else>展开详情 <i class="el-icon-arrow-right "></i></span>
+                </el-button>
+            </div>
+            <div v-if="show_image_video">
+                <el-collapse-transition>
+                    <!--这里遇到一个组件bug 两个 row会不现实下一个  这里用一个 div包裹-->
+                    <div>
+                        <el-row >
+                            <el-col :span="2"  class="font_14_500 gray">图片：</el-col>
+                            <el-col :span="22">
+                                <el-image class="image" :src="url" :preview-src-list="srcList"></el-image>
+                            </el-col>
+                        </el-row>
+                        <el-row >
+                            <el-col :span="2" class="font_14_500 gray">视频：</el-col>
+                            <el-col :span="22">
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                                <video class="video" :poster="url" controls src="https://media.w3.org/2010/05/sintel/trailer.mp4"></video>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-collapse-transition>
+            </div>
+        </el-card>
+        <el-card class="mt-20" v-if="form.base_info.status==1">
+            <span class="second-title "><i class="el-icon-info"></i>审核操作</span>
+            <el-button  class="mb-20" style="float: right" size="mini" type="primary" @click="show_examine = true">审 核</el-button>
+        </el-card>
+        <!--操作记录-->
+        <el-card class="mt-20">
+            <div slot="header">
+                <span class="second-title">操作记录</span>
+                <el-button style="float: right; padding: 3px 0" type="text" @click="show_log_list = !show_log_list">
+                    <span v-if="show_log_list">收起列表<i class="el-icon-arrow-down el-icon--right"></i></span>
+                    <span v-else>展开列表 <i class="el-icon-arrow-right "></i></span>
+                </el-button>
+            </div>
+            <el-row type="flex" v-if="show_log_list">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="form.log_list"
+                        fit
+                        size="mini"
+                        max-height="460px"
+                        highlight-current-row>
+                    <el-table-column label="序号" type="index"></el-table-column>
+                    <el-table-column property="client_name" label="操作者"></el-table-column>
+                    <el-table-column property="seller_name" label="操作时间" ></el-table-column>
+                    <el-table-column property="client_mobile" label="操作" ></el-table-column>
+                    <el-table-column property="client_mobile" label="审核状态" ></el-table-column>
+                    <el-table-column property="client_mobile" label="备注" min-width="200" show-overflow-tooltip></el-table-column>
+                </el-table>
+            </el-row>
+        </el-card>
+    </div>
+    <el-dialog title="审核详情" width="40%" :visible.sync="show_examine">
+        <el-form :model="examine_form" :rules="rules"   label-width="100px" class="pl-20" size="mini">
+            <el-form-item label="操作备注" required>
+                <el-input type="textarea" :rows="4"  maxlength="200" v-model="examine_form.check_remark" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="费用变更类型" >
+                <el-select v-model="examine_form.fee_type" class="label-right" clearable placeholder="请选择活动区域">
+                    <el-option
+                            v-for="item in settle_type_list"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item v-if="examine_form.fee_type" label="最终费用" >
+                <el-input-number class="label-right" v-model="examine_form.final_money"  show-word-limit width="220" :min="0" :max="99999999" clearable :step="10" :precision="2" controls-position="right" placeholder=""></el-input-number>
+            </el-form-item>
+        </el-form>
+        <div slot="footer">
+            <el-button type="success" @click="appeal_review(2)">通过审核</el-button>
+            <el-button   @click="appeal_review(3)">拒绝审核</el-button>
+        </div>
+    </el-dialog>
+
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                back_url: './driver_salary_online.php?act=driver_appeal_exa_list',
+                loading: false,
+                show_examine: false,
+                show_image_video: false,
+                show_log_list: false,
+                edit_second_type_show: false,
+                settle_type_list: [],
+                url: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
+                srcList: [
+                    'https://fuss10.elemecdn.com/8/27/f01c15bb73e1ef3793e64e6b7bbccjpeg.jpeg',
+                    'https://fuss10.elemecdn.com/1/8e/aeffeb4de74e2fde4bd74fc7b4486jpeg.jpeg',
+                ],
+                source: 4,
+                form: { base_info: {}},
+                examine_form: {},
+                second_type_form: {},
+                list: [],
+                rec_id: '',
+                rules: {}
+            }
+        },
+        created() {
+            const  query = this.parseQuery()
+            if(query.rec_id) {
+                this.rec_id = query.rec_id
+                this.get_details()
+            } else {
+                return this.$message({ type:'warning', message: '获取参数失败~' })
+            }
+            this.get_type_list()
+        },
+        /*公用函数*/
+        methods : {
+            get_details() {
+                this.loading = true
+                getDriverAppealCheckDetail({rec_id:  this.rec_id}).then(res => {
+                    _that.loading = false
+                    _that.form = res.data || {}
+                }).catch(_ => {
+                    _that.loading = false
+                })
+            },
+            set_default_data() {
+                _that.second_type_form.elevator_length = _that.form.base_info.elevator_length
+                _that.second_type_form.elevator_width = _that.form.base_info.elevator_width
+                _that.second_type_form.elevator_high = _that.form.base_info.elevator_high
+                _that.second_type_form.consign_distance = _that.form.base_info.consign_distance
+                _that.second_type_form.stairs_num = _that.form.base_info.stairs_num
+            },
+            appeal_review(check_status) {
+                _that.examine_form.check_status = check_status
+                if(!_that.examine_form.check_remark){ return this.$message({ type:'warning', message: '备注不可为空~' }) }
+                if(_that.examine_form.fee_type) {
+                    if(!_that.examine_form.final_money){ return this.$message({ type:'warning', message: '请填写最终费用~' }) }
+                }
+                _that.examine_form.rec_id = _that.rec_id
+                driverAppealCheck(_that.examine_form).then(res =>{
+                    if(res.code == 200){
+                        _that.show_examine = false
+                        _that.get_details()
+                    }
+                })
+            },
+            get_type_list() {
+                get_init_filter_data({ source: this.source }).then(res=> {
+                    _that.settle_type_list = res.data.settle_type_list
+                })
+            },
+            submit_second_type() {
+                if(_that.form.base_info == 1) {
+                    if(!_that.second_type_form.elevator_length){ return this.$message({ type:'warning', message: '二级选项长度不可为空~' }) }
+                    if(!_that.second_type_form.elevator_width){ return this.$message({ type:'warning', message: '二级选项宽度不可为空~' }) }
+                    if(!_that.second_type_form.elevator_high){ return this.$message({ type:'warning', message: '二级选项高度不可为空~' }) }
+                } else if(_that.form.base_info == 2) {
+                    if(!_that.second_type_form.consign_distance){ return this.$message({ type:'warning', message: '托运距离不可为空~' }) }
+                } else if(_that.form.base_info == 3){
+                    if(!_that.second_type_form.stairs_num){ return this.$message({ type:'warning', message: '楼梯数不可为空~' }) }
+                }
+                _that.second_type_form.rec_id = _that.rec_id
+                DriverAppealCheckSecondEdit(_that.second_type_form).then(res =>{
+                    if(res.code == 200){
+                        _that.edit_second_type_show = false
+                        _that.get_details()
+                    }
+                })
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style >
+    .image{
+        width: 120px;
+        height: 120px ;
+        margin: 10px;
+    }
+    .video{
+        width: 200px;
+        height: 240px ;
+        margin: 10px;
+    }
+    .el-form-item__label{
+        font-weight: bold;
+    }
+</style>

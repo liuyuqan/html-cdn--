@@ -1,0 +1,244 @@
+{include file="header.htm"}
+<!--司机申诉已审核列表-->
+<div id="app">
+    <el-container >
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span> - 司机申诉已审核列表</span>
+            <el-link :href="back_url" :underline="false" class="header_link">返回列表</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-row class="filter-container">
+                <span class="filter-label">城市</span>
+                <el-select v-model="listQuery.city" class="filter-item" size="mini" @change="change_city" clearable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">仓库库房</span>
+                <el-cascader :options="warehouse_list" v-model="warehouse" :props="{label:'store_name',value:'store_id'}" class="filter-item"  style="min-width: 240px" size="mini" clearable placeholder="需先选择城市"></el-cascader>
+                <span class="filter-label">订单号</span>
+                <el-input size="mini" v-model.trim="listQuery.order_sn" style="min-width: 240px" class="filter-item filter-item-w"  clearable placeholder="请输入发货单号"></el-input>
+                <span class="filter-label">发货单号</span>
+                <el-input size="mini"v-model.trim="listQuery.delivery_sn" style="min-width: 240px" class="filter-item filter-item-w"   clearable placeholder="请输入发货单号"></el-input>
+                <span class="filter-label">配送员</span>
+                <el-select v-model="listQuery.driver_id" class="filter-item" size="mini"   filterable clearable placeholder="请选择配送员">
+                    <el-option
+                            v-for="item in driver_list"
+                            :key="item.driver_id"
+                            :label="item.driver_name"
+                            :value="item.driver_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">反馈标签</span>
+                <el-input size="mini"v-model.trim="listQuery.label_name" class="filter-item filter-item-w"  clearable placeholder="请输入反馈标签"></el-input>
+                <span class="filter-label">审核状态</span>
+                <el-select v-model="listQuery.status" class="filter-item" size="mini" clearable placeholder="请选择审核状态">
+                    <el-option label="审核通过" value="2"></el-option>
+                    <el-option label="审核不通过" value="3"></el-option>
+                </el-select>
+                <span class="filter-label">费用变更类型</span>
+                <el-select v-model="listQuery.settle_type" class="filter-item" size="mini" clearable placeholder="请选择费用变更类型">
+                    <el-option
+                            v-for="item in settle_type_list"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id">
+                    </el-option>
+                </el-select>
+                <el-button class="filter-btn" size="mini" type="primary" icon="el-icon-search" @click="search_list">搜索</el-button>
+                <el-button class="filter-btn" size="mini" icon="el-icon-refresh-left" @click="reset">重置</el-button>
+            </el-row>
+            <el-row  type="flex">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="list"
+                        fit
+                        max-height="860px"
+                        v-loading ='loading'
+                        highlight-current-row>
+                    <el-table-column label="编号"  property="rec_id"></el-table-column>
+                    <el-table-column property="region_name" label="城市" ></el-table-column>
+                    <el-table-column property="store_name" label="仓库库房" min-width="140"></el-table-column>
+                    <el-table-column property="driver_name" label="配送员"></el-table-column>
+                    <el-table-column property="order_sn" label="订单号" min-width="160"></el-table-column>
+                    <el-table-column property="delivery_sn" label="发货单号" min-width="140"></el-table-column>
+                    <el-table-column property="second_type_name" label="二级选项" min-width="160"></el-table-column>
+                    <el-table-column property="label_name" label="反馈标签" min-width="100"></el-table-column>
+                    <el-table-column property="feedback_content" label="反馈内容" min-width="120" ></el-table-column>
+                    <el-table-column property="add_time" label="提交时间" min-width="100"></el-table-column>
+                    <el-table-column property="status_name" label="审核状态" ></el-table-column>
+                    <el-table-column property="fee_type_name" label="费用变更类型" ></el-table-column>
+                    <el-table-column property="final_money" label="最终费用" ></el-table-column>
+                    <el-table-column property="check_user_name" label="审核人" ></el-table-column>
+                    <el-table-column property="check_time" label="审核时间" min-width="120" ></el-table-column>
+                    <el-table-column  label="操作" >
+                        <template slot-scope="{ row }"  >
+                            <el-link  :href="view_url + row.rec_id" type="primary" :underline="false">查看</el-link>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-row>
+        </el-main>
+    </el-container>
+    <el-row class="pt-20 fr">
+        <el-pagination
+                :current-page.sync="listQuery.page"
+                :page-size.sync="listQuery.size"
+                :layout="layout"
+                :page-sizes="pageSizes"
+                :total="listQuery.total"
+                v-bind="$attrs"
+                @size-change="search_list"
+                @current-change="search_list"
+        />
+    </el-row>
+</div>
+<script>
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                view_url : './driver_salary_online.php?act=driver_appeal_exa_view&rec_id=',
+                back_url: './driver_salary_online.php?act=driver_appeal_exa_list',
+                loading: false,
+                search_delivery_loading: false,
+                warehouse_list: [], // 仓库列表
+                warehouse: [], // 仓库id 库房id
+                city_list:[],
+                settle_type_list:[],
+                listQuery: {
+                    list_type: 2,
+                    page_size: 20,
+                    page: 1,
+                    total: 0
+                },
+                driver_list: [],
+                list: [],
+                source: 4
+            }
+        },
+        watch: {
+            'warehouse': {
+                handler(newV, oldV) {
+                    if(newV) {
+                        _that.listQuery.store_id = newV[0] || ''
+                        _that.listQuery.house_id = newV[1] || ''
+                    }else {
+                        _that.listQuery.store_id = ''
+                        _that.listQuery.house_id = ''
+                    }
+                }
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({ source: this.source })
+                _that.city_list = data.city_list
+                _that.driver_list = data.driver_list
+                _that.settle_type_list = data.settle_type_list
+                _that.get_list()
+            },
+            change_status(row) {
+                row.visible = false
+            },
+            get_list() {
+                _that.loading = true
+                getDriverAppealCheckList(_that.listQuery).then(res => {
+                    _that.loading = false
+                    _that.list = res.data.data_list || []
+                    _that.listQuery.total = Number(res.data.data_total || 0)
+                }).catch(_ => {
+                    _that.loading = false
+                })
+            },
+            change_city(city) {
+                _that. get_warehouse_list(city)
+                _that.get_driver_list(city)
+            },
+            get_warehouse_list(city) {
+                _that.warehouse_list = []
+                _that.warehouse = []
+                if(city) {
+                    get_warehouse({city: city, source: _that.source }).then(res => {
+                        _that.warehouse_list = res.data || []
+                    })
+                }
+            },
+            get_driver_list(city) {
+                _that.driver_list =[]
+                _that.listQuery.driver_id = undefined
+                if(city) {
+                    getDeliveryDriverList({ city: city }).then(res => {
+                        _that.driver_list = res.data || []
+                    })
+                }
+            },
+            search_list() {
+                this.page = 1
+                this.get_list()
+            },
+            reset() {
+                this.listQuery = {
+                    list_type: 1,
+                    page_size: 20,
+                    page: 1
+                }
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less">
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+    .filter-item-w {
+        width: 240px;
+    }
+    .el-table td {
+        font-size: 12px !important;
+        font-weight: 500;
+        color: #666666;
+    }
+</style>

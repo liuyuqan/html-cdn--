@@ -1,0 +1,308 @@
+{include file="header.htm"}
+<!-- 司机结算费用申请原因配置 -->
+<div id="app">
+
+    <el-container >
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 司机结算费用申请原因配置</span>
+            <el-link @click="show_add_set=true" :underline="false" class="header_link">添加配置</el-link>
+        </el-header>
+        <el-main class="main">
+            <!-- 头部过滤项 -->
+            <el-row class="filter-container">
+                <span class="filter-label">城市</span>
+                <el-select v-model="listQuery.city" class="filter-item" size="mini" @change="change_city" clearable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">费用类型</span>
+                <el-select v-model="listQuery.fee_type" class="filter-item" size="mini" clearable placeholder="请选择费用类型">
+                    <el-option
+                            v-for="item in settle_fee_type"
+                            :key="item.fee_type"
+                            :label="item.type_name"
+                            :value="item.fee_type">
+                    </el-option>
+                </el-select>
+
+                <span class="filter-label">状态</span>
+                <el-select v-model="listQuery.is_enable" class="filter-item" size="mini"  placeholder="请选择操作状态">
+                    <el-option
+                            v-for="item in enable_list"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.id">
+                    </el-option>
+                </el-select>
+                <el-button class="filter-btn" size="mini" type="primary" icon="el-icon-search" @click="search_list">搜索</el-button>
+                <el-button class="filter-btn" size="mini" icon="el-icon-refresh-left" @click="reset">重置</el-button>
+            </el-row>
+            <el-row class="pt-20" type="flex">
+                <el-table
+                        :header-cell-style="{background:'#eef1f6',color:'#606266'}"
+                        ref="singleTable"
+                        :data="list"
+                        max-height="860px"
+                        v-loading ='loading'
+                        highlight-current-row>
+                    <el-table-column property="reason_id" label="编号" ></el-table-column>
+                    <el-table-column property="region_name" label="城市"></el-table-column>
+                    <el-table-column property="fee_type_name" label="费用类型" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="apply_reason" label="申请原因" min-width="150"></el-table-column>
+                    <el-table-column property="is_enable" label="启用状态" min-width="150">
+                        <template slot-scope="{ row }" >
+                                <el-switch
+                                        slot="reference"
+                                        @change="change_status(row)"
+                                        style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                                        :active-value="1"
+                                        :inactive-value="0"
+                                        v-model="row.is_enable"
+                                        active-color="#67C23A"
+                                        inactive-color="#dcdfe6"
+                                        active-text="启用"
+                                        inactive-text="禁用">
+                                </el-switch>
+                        </template>
+                    </el-table-column>
+                    <el-table-column  label="操作" min-width="150">
+                        <template slot-scope="{ row }"  >
+                            <el-popover
+                                    title="你确定要删除吗？"
+                                    placement="top"
+                                    width="160"
+                                    v-model="row.visible1">
+                                <div style="text-align: right; margin: 0">
+                                    <el-button size="mini" type="text" @click="row.visible1 = false">取消</el-button>
+                                    <el-button type="primary" size="mini"  @click="delete_conf(row)">确定</el-button>
+                                </div>
+                                <el-button slot="reference"  type="text" :underline="false">删除</el-button>
+                            </el-popover>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-row>
+            <el-row class="pt-20 fr">
+                <el-pagination
+                        :current-page.sync="listQuery.page"
+                        :page-size.sync="listQuery.size"
+                        :layout="layout"
+                        :page-sizes="pageSizes"
+                        :total="listQuery.total"
+                        v-bind="$attrs"
+                        @size-change="search_list"
+                        @current-change="search_list"/>
+            </el-row>
+        </el-main>
+    </el-container>
+    <el-dialog title="司机结算费用-添加" width="40%" :visible.sync="show_add_set">
+        <el-form :model="form" ref="form" :rules="rules"   label-width="100px" class="pl-20" size="mini">
+            <el-form-item label="城市" required prop="city" >
+                <el-select v-model="form.city" class="label-right" clearable filterable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="费用类型" required prop="fee_type">
+                <el-select v-model="form.fee_type" class="label-right" size="mini" clearable filterable  placeholder="请选择费用类型"  >
+                    <el-option
+                            v-for="item in settle_fee_type"
+                            :key="item.fee_type"
+                            :label="item.type_name"
+                            :value="item.fee_type">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="申请原因" required prop="apply_reason">
+                <el-input  show-word-limit maxlength="16"  class="label-right"  v-model="form.apply_reason" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="启用状态" required prop="is_enable">
+                <el-switch
+                        style="height: 28px;line-height: 18px; margin-left: inherit;margin-left: -30px;"
+                        v-model="form.is_enable"
+                        active-value="1"
+                        inactive-value="0"
+                        active-color="#67C23A"
+                        inactive-color="#dcdfe6"
+                        active-text="启用"
+                        inactive-text="禁用">
+                </el-switch>
+            </el-form-item>
+        </el-form>
+        <div slot="footer">
+            <el-button   @click="show_add_set = false">取 消</el-button>
+            <el-button type="primary" @click="submit">保 存</el-button>
+        </div>
+    </el-dialog>
+</div>
+<script>
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                loading: false,
+                show_add_set : false,
+                source: 5,
+                city_list: [],
+                settle_fee_type: [],
+                enable_list : [],
+                warehouse_list: [], // 仓库列表
+                warehouse: [], // 仓库id 库房id
+                piece_count_rule_type_list: [],
+                listQuery: {
+                    size: 20,
+                    page: 1,
+                    total: 0
+                },
+                form: {
+                    is_enable: '1'
+                },
+                rules: {
+                    city: [
+                        { required: true, message: '请选择城市', trigger: 'blur'}
+                    ],
+                    fee_type: [
+                        { required: true, message: '请选择费用类型', trigger: 'blur'}
+                    ],
+                    apply_reason: [
+                        { required: true, message: '请选择费用类型', trigger: 'blur'}
+                        ],
+                },
+                list: []
+            }
+        },
+        watch: {
+            'warehouse': {
+                handler(newV, oldV) {
+                    if(newV) {
+                        _that.listQuery.store_id = newV[0] || ''
+                        _that.listQuery.house_id = newV[1] || ''
+                    }else {
+                        _that.listQuery.store_id = ''
+                        _that.listQuery.house_id = ''
+                    }
+                }
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({ source: this.source })
+                _that.city_list = data.city_list || []
+                _that.settle_fee_type = data.settle_fee_type || []
+                _that.enable_list = data.enable_list || []
+                _that.get_list()
+            },
+            change_status(row) {
+                disableSettlementFeeOne({ reason_id: row.reason_id }).then(res => {
+                    if(res.code == 200 ) {
+                    } else {
+                        row.is_enable == 1 ?  _that.$set(row, 'is_enable', 0) : _that.$set(row, 'is_enable', 1)
+                    }
+                }).catch(_ => {
+                    row.is_enable == 1 ?  _that.$set(row, 'is_enable', 0) : _that.$set(row, 'is_enable', 1)
+                })
+
+            },
+            change_city(city) {
+                this.warehouse_list = []
+                get_warehouse({city: city, source: _that.source}).then(res => {
+                    this.warehouse_list = res.data || []
+                })
+            },
+            get_list() {
+                _that.loading = true
+                getDriverSettlementFeeApplicationReasonList(_that.listQuery).then(res => {
+                    _that.loading = false
+                    _that.list = res.data.data_list || []
+                    _that.listQuery.total = res.data.data_total || 0
+                }).catch(_=> {
+                    _that.loading = false
+                })
+            },
+            delete_conf(row) {
+                settlementFeeApplicationDelete({ reason_id: row.reason_id }).then(res => {
+                    if(res.code == 200 ) {
+                       _that.get_list()
+                    }
+                })
+            },
+            submit() {
+               this.$refs.form.validate((valid) => {
+                    if(valid) {
+                        _that.loading = true
+                        settlementFeeApplicationAdd(_that.form).then(res => {
+                            _that.show_add_set =  _that.loading  = false
+                            _that.form = {is_enable: '1'}
+                            _that.get_list()
+                        }).catch(_=> {
+                            _that.loading  = false
+                        })
+                    }
+                })
+            },
+            search_list() {
+                this.page = 1
+                this.get_list()
+            },
+            reset() {
+                this.listQuery = {
+                    size: 20,
+                    page: 1
+                }
+                this.get_list()
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less">
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+</style>

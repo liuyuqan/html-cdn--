@@ -1,0 +1,224 @@
+{include file="header.htm"}
+<div id="app">
+    <el-container >
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 配送员工资列表</span>
+        </el-header>
+        <el-main class="main">
+            <el-row class="filter-container">
+                <span class="filter-label">城市</span>
+                <el-select v-model="listQuery.city" class="filter-item" size="mini" @change="get_driver_list" clearable placeholder="请选择城市">
+                    <el-option
+                            v-for="item in city_list"
+                            :key="item.region_id"
+                            :label="item.region_name"
+                            :value="item.region_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">配送员</span>
+                <el-select v-model="listQuery.user_id" class="filter-item" size="mini"   filterable clearable placeholder="请选择配送员">
+                    <el-option
+                            v-for="item in driver_list"
+                            :key="item.driver_id"
+                            :label="item.driver_name"
+                            :value="item.driver_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">配送员标签</span>
+                <el-select v-model="listQuery.driver_tag" class="filter-item" size="mini" clearable placeholder="请选择配送员标签">
+                    <el-option
+                            v-for="item in driver_tag_list"
+                            :key="item.tag_id"
+                            :label="item.tag_name"
+                            :value="item.tag_id">
+                    </el-option>
+                </el-select>
+                <span class="filter-label">费用入账时间</span>
+                <el-date-picker
+                        class="filter-item"
+                        size="mini"
+                        v-model="listQuery.add_time_start"
+                        align="right"
+                        type="date"
+                        value-format ='yyyy-MM-dd'
+                        placeholder="开始时间"
+                        :picker-options="pickerOptions">
+                </el-date-picker>
+                <el-date-picker
+                        v-model="listQuery.add_time_end"
+                        align="right"
+                        class="filter-item"
+                        size="mini"
+                        value-format ='yyyy-MM-dd'
+                        type="date"
+                        placeholder="结束时间"
+                        :picker-options="pickerOptions">
+                </el-date-picker>
+                <el-button class="filter-btn" size="mini" type="primary" icon="el-icon-search" @click="search_list">搜索</el-button>
+                <el-button class="filter-btn" size="mini" icon="el-icon-refresh-left" @click="reset">重置</el-button>
+            </el-row>
+            <el-row  type="flex">
+                <el-table
+                        v-loading="loading"
+                        :header-cell-style="{background:'#eef1f6',color:'#606266','border-right': '1px solid #DCDFE6', 'border-bottom': '1px solid #DCDFE6'}"
+                        ref="singleTable"
+                        :data="list"
+                        max-height="900px"
+                        v-loading ='loading'
+                        highlight-current-row>
+                    <el-table-column label="编号" property="user_id"></el-table-column>
+                    <el-table-column property="region_name" label="城市"></el-table-column>
+                    <el-table-column property="user_name" label="配送员" min-width="100" ></el-table-column>
+                    <el-table-column property="driver_tag_name" label="配送员标签" min-width="120" show-overflow-tooltip></el-table-column>
+                    <el-table-column property="order_count" label="配送单量（单）" min-width="100"></el-table-column>
+                    <el-table-column label="费用明细（元）" align="center">
+                        <el-table-column property="shipping_fee" label="配送费"  min-width="80"></el-table-column>
+                        <el-table-column property="banlou_fee" label="搬楼费"  min-width="80"></el-table-column>
+                        <el-table-column property="consign_fee" label="托运费"  min-width="80"></el-table-column>
+                        <el-table-column property="tonnage_fee" label="吨位费"  min-width="80"></el-table-column>
+                        <el-table-column property="expedit_fee" label="加急费"  min-width="80"></el-table-column>
+                        <el-table-column property="night_fee" label="夜班费"  min-width="80"></el-table-column>
+                        <el-table-column property="distance_fee" label="远程费"  min-width="80"></el-table-column>
+                        <el-table-column property="reward_money" label="奖励"  min-width="80"></el-table-column>
+                        <el-table-column property="punish_money" label="罚款"  min-width="80"></el-table-column>
+                    </el-table-column>
+                    <el-table-column property="total_money" label="总计（元）" min-width="100"></el-table-column>
+                    <el-table-column  label="操作"  min-width="100" >
+                        <template slot-scope="{ row }"  >
+                            <el-link  :href="details_href + row.user_id +'&city='+row.city " type="primary" :underline="false">查看明细</el-link>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-row>
+        </el-main>
+    </el-container>
+    <el-row class="pt-20 fr">
+        <el-pagination
+                :current-page.sync="listQuery.page"
+                :page-size.sync="listQuery.size"
+                :layout="layout"
+                :page-sizes="pageSizes"
+                :total="listQuery.total"
+                v-bind="$attrs"
+                @size-change="search_list"
+                @current-change="search_list"
+        />
+    </el-row>
+</div>
+<script>
+    let opts = {
+        el: '#app',
+        data() {
+            return {
+                details_href: './driver_salary_online.php?act=delivery_sal_details&driver_id=',
+                loading: false,
+                delivery_list: [],
+                source: 3,
+                form: {
+                    seller_id: '',
+                }, // 添加配置数据对象
+                listQuery: {
+                    view_source: 1,
+                    size: 20,
+                    page: 1,
+                    total: 0
+                },
+                city_list: [],
+                driver_list: [],
+                driver_tag_list: [],
+                list: []
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({ source: this.source })
+                _that.city_list = data.city_list
+                _that.driver_tag_list = data.driver_tag_list
+                _that.driver_list = data.driver_list
+                _that.get_list()
+            },
+            change_status(row) {
+                row.visible = false
+            },
+            get_list() {
+                _that.loading = true
+                getDriverSalaryList(_that.listQuery).then(res => {
+                    _that.loading = false
+                    _that.list = res.data.data_list || []
+                    _that.listQuery.total = Number(res.data.data_total || 0)
+                }).catch(_ => {
+                    _that.loading = false
+                })
+            },
+            get_driver_list() {
+                _that.listQuery.user_id = ''
+                _that.driver_list =[]
+                if(_that.listQuery.city) {
+                    getDeliveryDriverList({ city: _that.listQuery.city }).then(res => {
+                        _that.driver_list = res.data || []
+                    })
+                }
+            },
+            search_list() {
+                this.page = 1
+                this.get_list()
+            },
+            export_excel() {
+                window.open('./')
+            },
+            reset() {
+                this.listQuery = {
+                    view_source: '1',
+                    page_size: 20,
+                    page: 1
+                }
+                this.get_list()
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+    console.log(_that);
+</script>
+<style lang="less">
+    .label-right{
+        width: 260px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+</style>

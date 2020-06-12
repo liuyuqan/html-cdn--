@@ -1,0 +1,301 @@
+{include file="header.htm"}
+<!--添加司机反馈标签配置-->
+<div id="app">
+    <el-container v-loading="loading">
+        <el-header class="header">
+            <span class="header_title">小胖熊</span> <span>- 添加司机结算费用申请</span>
+            <el-link :href="back_url" :underline="false" class="header_link">返回列表</el-link>
+        </el-header>
+        <el-main class="main">
+            <el-row>
+                <el-col  :offset="4"  :span="16">
+                    <el-form ref="form" :rules="rules"  :model="form"  label-width="160px" class="pl-20" size="mini">
+                        <el-form-item label="城市"  prop="city" >
+                            <el-select v-model="form.city" class="label-right" @change="change_city" clearable filterable placeholder="请选择城市">
+                                <el-option
+                                        v-for="item in city_list"
+                                        :key="item.region_id"
+                                        :label="item.region_name"
+                                        :value="item.region_id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="仓库库房"  prop="warehouse">
+                            <el-cascader :key="form.city" :options="warehouse_list" v-model="form.warehouse" :props="{label:'store_name',value:'store_id'}" class="label-right"   size="mini" clearable placeholder="需先选择城市"></el-cascader>
+                        </el-form-item>
+                        <el-form-item label="费用类型"  prop="fee_type" >
+                            <el-radio-group v-model="form.fee_type"  @change="change_fee_type" size="mini">
+                                <el-radio :label="item.fee_type" :key="item.fee_type" style="height: 28px;line-height: 28px;" v-for="item in settle_fee_type">{{item.type_name}}</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="订单号"  prop="order_sn">
+                            <el-input size="mini" v-model="form.order_sn" placeholder="请输入完整订单号"  :maxLength="40" class="label-right"></el-input>
+                            <el-button :disabled="!form.order_sn" type="primary" size="mini"   @click="get_delivery_by_order">获取发货单号</el-button>
+                        </el-form-item>
+                        <el-form-item label="发货单号"  prop="delivery_id">
+                            <el-select v-model="form.delivery_id" class="label-right" no-data-text="请先获取发货单号"	 @change="get_driver_list" clearable filterable placeholder="请选择发货单号">
+                                <el-option
+                                        v-for="item in delivery_sns"
+                                        :key="item.delivery_id"
+                                        :label="item.delivery_sn"
+                                        :value="item.delivery_id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="配送员"  prop="driver_id">
+                            <el-select v-model="form.driver_id"
+                                       :disabled="!form.city"
+                                       class="label-right"
+                                        filterable placeholder="请选择配送员">
+                                <el-option
+                                        v-for="item in driver_list"
+                                        :key="item.driver_id"
+                                        :label="item.driver_name"
+                                        :value="item.driver_id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="申请原因"   prop="reason_id">
+                            <el-select v-model="form.reason_id"
+                                       class="label-right"
+                                       no-data-text="需先配置申请原因"
+                                       placeholder="请选择申请原因">
+                                <el-option
+                                        v-for="item in reason_list"
+                                        :key="item.reason_id"
+                                        :label="item.apply_reason"
+                                        :value="item.reason_id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="最终费用（元）"  prop="final_money" >
+                            <el-input-number v-model="form.final_money"  class="label-right" :min="0" :max="99999999" :step="10" :precision="2" controls-position="right" placeholder=""></el-input-number>
+                        </el-form-item>
+                        <el-form-item label="备注说明"  prop="remark" >
+                            <el-input type="textarea" :rows="4" class="label-right"  show-word-limit maxlength="300" v-model="form.remark" autocomplete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item >
+                            <el-button type="primary"  @click="submit" size="small">提交申请</el-button>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </el-main>
+    </el-container>
+</div>
+<script>
+    // vue 初始化配置
+    let opts = {
+        el: '#app',
+        data() {
+            const  validate_order_sn =  (rule, value, callback)  => {
+                if(_that.form.fee_type == 1 || _that.form.fee_type == 2 || _that.form.fee_type == 3) {
+                    if(!value) {
+                        return callback(new Error('订单号不可为空'));
+                    }
+                    callback();
+                }
+                callback();
+            }
+            const  validate_delivery_sn =  (rule, value, callback)  => {
+                if(_that.form.fee_type == 1 || _that.form.fee_type == 2 || _that.form.fee_type == 3) {
+                    if(!value) { return callback(new Error('请选择择发货单号')) }
+                    callback();
+                }
+                callback();
+            }
+            return {
+                back_url: './driver_salary_online.php?act=delivery_settl_fee_appl_list',
+                loading: false,
+                source: 6,
+                city_list: [],
+                settle_fee_type: [],
+                driver_list:[],
+                warehouse_list:[],
+                delivery_sns: [],
+                reason_list: [],
+                warehouse: [], // 仓库id 库房id
+                form: {
+                    warehouse: [],
+                    reason_id: undefined,
+                    fee_type: '1'
+                }, // 添加配置数据对象
+                rules: {
+                    city: [
+                        { required: true, trigger: 'change', message: '请选择城市' }
+                    ],
+                    fee_type: [
+                        { required: true, trigger: 'change', message: '请选择费用类型' }
+                    ],
+                    order_sn: [
+                        { required: true, trigger: 'blur',  validator: validate_order_sn }
+                    ],
+                    delivery_sn: [
+                        { required: true, trigger: 'change', validator: validate_delivery_sn }
+                    ],
+                    driver_id: [
+                        { required: true, trigger: 'change', message: '请选择配送员' }
+                    ],
+                    remark: [
+                        { required: true, trigger: 'blur', message: '备注不可为空' }
+                    ],
+                    final_money: [
+                        { required: true, trigger: 'blur', message: '最终费用不可为空' }
+                    ],
+                    warehouse: [
+                        { type: 'array', required: true, message: '请选择仓库库房', trigger: 'change'},
+                    ]
+                }
+            }
+        },
+        created() {
+            this.init_data()
+        },
+        /*公用函数*/
+        methods : {
+            async init_data() {
+                const _that = this
+                const  { data } = await get_init_filter_data({ source: this.source })
+                _that.city_list = data.city_list || []
+                _that.settle_fee_type = data.settle_fee_type || []
+            },
+            change_city(e) {
+                _that.delivery_sns = []
+                _that.reason_list = []
+                _that.driver_list = []
+                _that.get_warehouse_list(e)
+                _that.get_driver_list()
+                if(_that.form.city && _that.form.fee_type) {
+                    _that.get_reasons()
+                }
+            },
+            get_warehouse_list(city) {
+                _that.warehouse_list = []
+                _that.warehouse = []
+                get_warehouse({city: city, source: _that.source}).then(res => {
+                    this.warehouse_list = res.data || []
+                })
+            },
+            get_delivery_by_order(){
+                if(!_that.form.order_sn) { return _that.$message({ type: 'warning', message: '请先填写订单号'}) }
+                if(!_that.form.city) { return _that.$message({ type: 'warning', message: '请先选择城市'}) }
+                _that.form.delivery_id = undefined
+                getDeliveryListByOrderSn({ order_sn: _that.form.order_sn, city: _that.form.city  }).then(res =>{
+                    _that.delivery_sns = res.data || []
+                   if(_that.delivery_sns.length > 0) {
+                       _that.form.delivery_id =  _that.delivery_sns[0].delivery_id + ''
+                       _that.get_driver_list()
+                   }
+                }).catch(() => {
+                    _that.form.delivery_id = undefined
+                    _that.delivery_sns = []
+                })
+            },
+            get_driver_list() {
+                _that.form.driver_id = undefined
+                _that.driver_list = []
+                let params ={}
+                if(!_that.form.city) { return _that.$message({ type: 'warning', message: '请先选择城市'}) }
+                params = { city: _that.form.city }
+                params.delivery_id = _that.form.delivery_id
+                if([1,2,3].includes( _that.form.fee_type)) {
+                    if(!_that.form.delivery_id) { return _that.$message({ type: 'warning', message: '请先选择发货单号'}) }
+                }
+                getDeliveryDriverList(params).then(res => {
+                    _that.driver_list = res.data || []
+                    if( _that.driver_list.length == 1) {
+                        _that.form.driver_id =  _that.driver_list[0].driver_id +''
+                    }
+                })
+            },
+            change_fee_type() {
+                _that.get_reasons()
+            },
+            get_reasons() {
+                _that.reason_list = []
+                _that.form.reason_id = undefined
+                if(!_that.form.fee_type) { return _that.$message({ type: 'warning', message: '请先选择费用类型'}) }
+                if(!_that.form.city) { return _that.$message({ type: 'warning', message: '请先选择城市'}) }
+                getDriverSettlementFeeApplicationConfigByType({ city: _that.form.city, fee_type: _that.form.fee_type  }).then(res => {
+                    _that.reason_list = _that.reason_list.concat(res.data || [])
+                })
+            },
+            submit() {
+                this.$refs['form'].validate((valid) => {
+                    if(valid) {
+                        const  delivery =  _that.delivery_sns.filter((item) => {
+                            return item.delivery_id ==  _that.form.delivery_id
+                        })
+                        if(delivery.length > 0) {
+                            _that.form.delivery_sn = delivery[0].delivery_sn
+                            _that.form.order_id = delivery[0].order_id
+                            _that.loading = true
+                            _that.form.store_id = _that.form.warehouse[1]
+                            DriverSettlementFeeApplicationAdd(_that.form).then(res => {
+                                _that.loading = false
+                                window.location.href = _that.back_url
+                            }).catch(_ => {
+                                _that.loading = false
+                            })
+                        } else {
+                              return _that.$message({ type: 'warning', message: '添加失败~'})
+                        }
+                    }
+                })
+
+            }
+        }
+    }
+    const _that = new  XVue(opts)
+</script>
+<style lang="less" >
+    .label-right{
+        width: 260px;
+    }
+    .radio-height{
+        height: 28px;
+        line-height: 28px;
+    }
+    .el-switch__label--left {
+        position: relative;
+        left: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right {
+        position: relative;
+        right: 60px;
+        color: #fff;
+        z-index: -1111;
+        height: 16px;
+
+    }
+
+    .el-switch__label--right.is-active {
+        z-index: 1111;
+        height: 16px;
+        color: #fff !important;
+    }
+
+    .el-switch__label--left.is-active {
+        z-index: 1111;
+        color: #9c9c9c !important;
+        height: 16px;
+
+    }
+    .el-switch__core{
+        width: 60px !important;
+    }
+    .el-card__body{
+        padding: 0px;
+    }
+    .el-card.is-always-shadow {
+        box-shadow: 0 2px 2px 0 rgba(0,0,0,.1) !important;
+    }
+    .el-input-number .el-input__inner{
+        text-align: left !important;
+    }
+</style>
